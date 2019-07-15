@@ -25,7 +25,7 @@ export namespace Primitives {
      * Represents an Errors composition function.
      */
     export interface EComposer {
-        (e: ErrorType): ErrorType;
+        (f: ErrorType): ErrorType;
     } 
 
     /**
