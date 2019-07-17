@@ -12,7 +12,7 @@ export declare namespace Primitives {
      * Represents an Errors composition function.
      */
     interface EComposer {
-        (e: ErrorType): ErrorType;
+        (f: ErrorType): ErrorType;
     }
     /**
      * Represents a successful parse.
