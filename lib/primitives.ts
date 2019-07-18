@@ -10,6 +10,7 @@ import { WSError } from "./Errors/WSError";
 import { StringError } from "./Errors/StringError";
 import { BetweenLeftError } from "./Errors/BetweenLeftError";
 import { BetweenRightError } from "./Errors/BetweenRightError";
+import { None, Some, Option } from "space-lift";
 
 export namespace Primitives {
     export class EOFMark {
@@ -58,7 +59,6 @@ export namespace Primitives {
 
         /**
          * Returns an object representing a failed parse.
-         * If the failure is critical, then parsing will stop immediately.
          *
          * @param istream The string, unmodified, that was given to the parser.
          * @param error_pos The position of the parsing failure in istream
@@ -108,10 +108,8 @@ export namespace Primitives {
 
     /**
      * expect tries to apply the given parser and returns the result of that parser
-     * if it succeeds, otherwise it returns a critical Failure
-     * If the parser results in a critical Failure, expect simply returns it,
-     * otherwise expect creates a critical Failure with the given error message
-     * and the start pos of the istream as the error pos.
+     * if it succeeds, otherwise it replaces the current stream with a stream with
+     * modified code given a correct edit, and tries again.
      *
      * @param parser The parser to try
      * @param f A function that produces a new Errors given an existing Errors
@@ -124,6 +122,9 @@ export namespace Primitives {
                     case "success":
                         return outcome;
                     case "failure":
+                        //let fail: Failure = new Failure(istream, istream.startpos, f(outcome.error));
+                        //let fix = fail.error.minEdit(istream.toString(),fail.error.expectedStr());
+                
                         return new Failure(istream, istream.startpos, f(outcome.error));
                 }
             }
@@ -293,8 +294,18 @@ export namespace Primitives {
                             case "success":
                                 break;
                             case "failure":
-                                return (o2.error_pos >= o.error_pos)
-                                    ? o2 : o;
+                                let str = istream.toString()
+                                if (o.error_pos == o2.error_pos) {
+                                    let str1 = str.substring(o.error_pos, o.error_pos + o.error.expectedStr().length);
+                                    let str2 = str.substring(o.error_pos, o.error_pos + o2.error.expectedStr().length);
+                            
+                                    let o1Edit : number = o.error.minEdit(str1, o.error.expectedStr());
+                                    let o2Edit : number = o2.error.minEdit(str2, o2.error.expectedStr());
+
+                                    return (o2Edit < o1Edit) ? o : o2;
+                                }
+
+                                return (o2.error_pos > o.error_pos) ? o2 : o
                         }
                         return o2;
                 }
@@ -464,13 +475,13 @@ export namespace Primitives {
     export function between<T, U, V>(popen: IParser<T>): (pclose: IParser<U>) => (p: IParser<V>) => IParser<V> {
         return (pclose: IParser<U>) => {
             return (p: IParser<V>) => {
-                let l: IParser<V> = expect(left<V, U>(p)(pclose))(
+                let l: IParser<V> = left<V, U>(p)(expect(pclose)(
                     (error : ErrorType) => new BetweenRightError(error)
-                );
+                ));
 
-                let r: IParser<V> = expect(right<T, V>(popen)(l))(
+                let r: IParser<V> = right<T, V>(expect(popen)(
                     (error : ErrorType) => new BetweenLeftError(error)
-                );
+                ))(l);
                 return r;
             }
         }
@@ -485,7 +496,7 @@ export namespace Primitives {
     export function debug<T>(p: IParser<T>) {
         return (label: string) => {
             return (istream: CharStream) => {
-                console.log("apply: " + label + ", startpos: " + istream.startpos + ", endpos: " + istream.endpos);
+                ("apply: " + label + ", startpos: " + istream.startpos + ", endpos: " + istream.endpos);
                 let o = p(istream);
                 switch (o.tag) {
                     case "success":
@@ -585,7 +596,7 @@ export namespace Primitives {
                     }
                 }
             }
-            return new Failure(istream, istream.startpos, new StringError(<string>istream.substring(istream.startpos, istream.length() - 1).input));
+            return new Failure(istream, istream.startpos, new StringError(<string>istream.substring(istream.startpos, istream.endpos).input));
         }
     }
 }

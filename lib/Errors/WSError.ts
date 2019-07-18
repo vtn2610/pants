@@ -1,5 +1,6 @@
 import { ErrorType } from "./ErrorType";
 import { Option, Some, None } from "space-lift";
+import { metriclcs } from "../Edit/MetricLcs";
 
 export class WSError implements ErrorType {
 
@@ -9,6 +10,14 @@ export class WSError implements ErrorType {
 
     explanation() : string {
         return "white space";
+    }
+
+    minEdit(input: string, expectedStr: string) : number {
+        return metriclcs(input, expectedStr);
+    }
+
+    expectedStr() : string {
+        return " " ;
     }
 
     toString() : string {

@@ -1,5 +1,7 @@
 import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
+import { metriclcs } from "../Edit/MetricLcs";
+
 
 export class CharError implements ErrorType {
     private _expectedChar : string;
@@ -14,6 +16,14 @@ export class CharError implements ErrorType {
 
     explanation() {
         return "character " + " ' " + this._expectedChar + " ' "; 
+    }
+
+    minEdit(input: string, expectedStr: string) : number {
+        return metriclcs (input, expectedStr);
+    }
+
+    expectedStr() : string {
+        return this._expectedChar;
     }
 
     toString() : string {

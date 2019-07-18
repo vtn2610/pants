@@ -5,6 +5,13 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "dependencies": {
+<<<<<<< HEAD
+    "@types/js-levenshtein": "^1.1.0",
+    "js-levenshtein": "^1.1.6",
+    "metric-lcs": "^0.1.2",
+    "node-lcs": "^1.0.2",
+=======
+>>>>>>> master
     "space-lift": "^0.8.7"
   },
   "devDependencies": {

@@ -5,5 +5,7 @@ export declare class CharError implements ErrorType {
     constructor(expectedChar: string);
     rootCause(): Option<ErrorType>;
     explanation(): string;
+    minEdit(input: string, expectedStr: string): number;
+    expectedStr(): string;
     toString(): string;
 }
