@@ -308,8 +308,9 @@ export namespace Primitives {
 
     /**
      * Like choice, but chooses from multiple possible parsers
-     * Calculates longest common subsequence for each choice, 
-     * and returns the maximum
+     * First considers the farthest failing error, and if there
+     * are multiple, calculate longest common subsequence for each choice, 
+     * and returns the maximum LCS
      * Example usage: choices(p1, p2, p3)
      *
      * @param parsers An array of parsers to try
