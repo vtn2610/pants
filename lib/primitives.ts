@@ -315,8 +315,9 @@ export namespace Primitives {
 
     /**
      * Like choice, but chooses from multiple possible parsers
-     * Calculates longest common subsequence for each choice, 
-     * and returns the maximum
+     * First considers the farthest failing error, and if there
+     * are multiple, calculate longest common subsequence for each choice, 
+     * and returns the maximum LCS
      * Example usage: choices(p1, p2, p3)
      *
      * @param parsers An array of parsers to try
@@ -327,7 +328,7 @@ export namespace Primitives {
             throw new Error("Error: choices must have a non-empty array.");
         }
         for(let parser of parsers){
-            LCSParse(parser)
+            let lcsVal: number = LCSParse(parser);
             //Force parse each choice parser, holding onto only the LCS value and 
             //store the value into the edits array
         } 
@@ -343,6 +344,7 @@ export namespace Primitives {
                 switch (o.tag) {
                     case "success":
                         //Keep parsing with next parser
+                        LCSParse(item(),LCS)(istream);
                     case "failure":
                         let e = <Failure> o;
                         LCS += e.error.minEdit(istream.toString(), e.error.expectedStr())
