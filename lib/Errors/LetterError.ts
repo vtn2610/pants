@@ -18,7 +18,7 @@ export class LetterError implements ErrorType {
     }
 
     expectedStr() : string {
-        return " " ;
+        return "a" ;
     }
 
     toString() : string {

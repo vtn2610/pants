@@ -147,13 +147,14 @@ export declare namespace Primitives {
     function choice<T>(p1: IParser<T>): (p2: IParser<T>) => IParser<T>;
     /**
      * Like choice, but chooses from multiple possible parsers
-     * The parser will be tried in the order of the input, and the result of
-     * the first parser to succeed is returned
+     * Calculates longest common subsequence for each choice,
+     * and returns the maximum
      * Example usage: choices(p1, p2, p3)
      *
      * @param parsers An array of parsers to try
      */
     function choices<T>(...parsers: IParser<T>[]): IParser<T>;
+    function LCSParse<T>(p: IParser<T>, LCS: number | undefined, istream: CharStream): number;
     /**
      * appfun allows the user to apply a function f to
      * the result of a parser p, assuming that p is successful.

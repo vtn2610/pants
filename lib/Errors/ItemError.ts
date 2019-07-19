@@ -17,7 +17,7 @@ export class ItemError implements ErrorType {
     }
 
     expectedStr() : string {
-        return "" ;
+        return " " ;
     }
 
     toString() : string {

@@ -19,7 +19,7 @@ export class CharError implements ErrorType {
     }
 
     minEdit(input: string, expectedStr: string) : number {
-        return metriclcs (input, expectedStr);
+        return metriclcs(input, expectedStr);
     }
 
     expectedStr() : string {

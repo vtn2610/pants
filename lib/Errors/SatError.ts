@@ -25,7 +25,7 @@ export class SatError implements ErrorType {
     }
 
     expectedStr(): string{
-        return "";
+        return this._expectedStr[0];
     }
 
     toString() {

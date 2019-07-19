@@ -294,18 +294,11 @@ export namespace Primitives {
                             case "success":
                                 break;
                             case "failure":
-                                let str = istream.toString()
-                                if (o.error_pos == o2.error_pos) {
-                                    let str1 = str.substring(o.error_pos, o.error_pos + o.error.expectedStr().length);
-                                    let str2 = str.substring(o.error_pos, o.error_pos + o2.error.expectedStr().length);
-                            
-                                    let o1Edit : number = o.error.minEdit(str1, o.error.expectedStr());
-                                    let o2Edit : number = o2.error.minEdit(str2, o2.error.expectedStr());
 
-                                    return (o2Edit < o1Edit) ? o : o2;
-                                }
+                                let o1Edit = LCSParse(p1, 0, istream);
+                                let o2Edit = LCSParse(p2, 0, istream);
+                                return (o2Edit > o1Edit) ? o : o2;
 
-                                return (o2.error_pos > o.error_pos) ? o2 : o
                         }
                         return o2;
                 }
@@ -322,36 +315,35 @@ export namespace Primitives {
      * @param parsers An array of parsers to try
      */
     export function choices<T>(...parsers: IParser<T>[]): IParser<T> {
-        let editDist : number[] = [];
         if (parsers.length == 0) {
             throw new Error("Error: choices must have a non-empty array.");
         }
-        for(let parser of parsers){
-            LCSParse(parser)
-            //Force parse each choice parser, holding onto only the LCS value and 
-            //store the value into the edits array
-        } 
-        return parsers[editDist.indexOf(Math.max(...editDist))]
+        return (parsers.length > 1)
+            ? choice<T>(parsers[0])(choices<T>(...parsers.slice(1)))
+            : parsers[0];
     }
 
     //performs the force parse, and returns ultimately the LCS length
-    function LCSParse<T>(p: IParser<T>, LCS: number = 0): IParser<number> {
-        return (istream: CharStream) => {
+    export function LCSParse<T>(p: IParser<T>, LCS: number = 0, istream : CharStream): number {
+        if (!istream.isEmpty()) {
             let istream2 = istream;
-            while (!istream2.isEmpty()) {
                 let o = p(istream2);
                 switch (o.tag) {
                     case "success":
+                        break;
                         //Keep parsing with next parser
                     case "failure":
                         let e = <Failure> o;
-                        LCS += e.error.minEdit(istream.toString(), e.error.expectedStr())
+                        let str = istream2.toString();
+                        let str1 = str.substring(e.error_pos, e.error_pos + e.error.expectedStr().length);
+                        LCS += str1.length - e.error.minEdit(str1, e.error.expectedStr());
+                        str = str.substring(0, e.error_pos) + e.error.expectedStr() + str.substring(e.error_pos + e.error.expectedStr().length);
+                        return LCSParse(p, LCS, new CharStream(str));
                         //calculate LCS, replace istream, and call LCSParse on same parser
-                }
             }
-            return new Success(istream,LCS);
         }
-    }
+        return LCS
+        }
     /**
      * appfun allows the user to apply a function f to
      * the result of a parser p, assuming that p is successful.
