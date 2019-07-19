@@ -315,21 +315,43 @@ export namespace Primitives {
 
     /**
      * Like choice, but chooses from multiple possible parsers
-     * The parser will be tried in the order of the input, and the result of
-     * the first parser to succeed is returned
+     * Calculates longest common subsequence for each choice, 
+     * and returns the maximum
      * Example usage: choices(p1, p2, p3)
      *
      * @param parsers An array of parsers to try
      */
     export function choices<T>(...parsers: IParser<T>[]): IParser<T> {
+        let editDist : number[] = [];
         if (parsers.length == 0) {
             throw new Error("Error: choices must have a non-empty array.");
         }
-        return (parsers.length > 1)
-            ? choice<T>(parsers[0])(choices<T>(...parsers.slice(1)))
-            : parsers[0];
+        for(let parser of parsers){
+            LCSParse(parser)
+            //Force parse each choice parser, holding onto only the LCS value and 
+            //store the value into the edits array
+        } 
+        return parsers[editDist.indexOf(Math.max(...editDist))]
     }
 
+    //performs the force parse, and returns ultimately the LCS length
+    function LCSParse<T>(p: IParser<T>, LCS: number = 0): IParser<number> {
+        return (istream: CharStream) => {
+            let istream2 = istream;
+            while (!istream2.isEmpty()) {
+                let o = p(istream2);
+                switch (o.tag) {
+                    case "success":
+                        //Keep parsing with next parser
+                    case "failure":
+                        let e = <Failure> o;
+                        LCS += e.error.minEdit(istream.toString(), e.error.expectedStr())
+                        //calculate LCS, replace istream, and call LCSParse on same parser
+                }
+            }
+            return new Success(istream,LCS);
+        }
+    }
     /**
      * appfun allows the user to apply a function f to
      * the result of a parser p, assuming that p is successful.
