@@ -32,7 +32,7 @@ export function metriclcs(s1: string, s2: string): string[] {
       }
     }
     console.log(c);
-    return backtrack(c, x, y, s1_length-1, s2_length-1, []);
+    return diff(c, x, y, s1_length-1, s2_length-1, []);
   }
 
   function backtrack(c: number[][], s1: string[], s2: string[], i: number, j: number, edits: string[]): string[] {
@@ -52,15 +52,14 @@ export function metriclcs(s1: string, s2: string): string[] {
   function diff(c: number[][], s1: string[], s2: string[], i: number, j: number, edits: string[]): string[]{
     if (i > 0 && j > 0 && s1[i-1] === s2[j-1]){
       diff(c, s1, s2, i-1, j-1, edits);
-      //edits.push(s1[i-1]);
-    }
-    else if ( j > 0 && (i == 0 || c[i][j-1] > c[i-1][j])){
-      diff(c, s1, s2, i, j-1, edits);
-      edits.push("-" + s2[j-1]);
     }
     else if (i > 0 && (j == 0 || c[i][j-1] <= c[i-1][j])){
       diff(c, s1, s2, i-1, j, edits);
       edits.push("+" + s1[i-1]);
+    }
+    else if ( j > 0 && (i == 0 || c[i][j-1] > c[i-1][j])){
+      diff(c, s1, s2, i, j-1, edits);
+      edits.push("-" + s2[j-1]);
     }
     return edits;
   }
