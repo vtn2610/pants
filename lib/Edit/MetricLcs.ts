@@ -1,6 +1,5 @@
 import { string } from "space-lift/commonjs/object/is";
 
-const jslevenshtein = require('js-levenshtein');
 /*
  * Return the length of Longest Common Subsequence (LCS) between strings s1
  * and s2.
@@ -9,15 +8,12 @@ const jslevenshtein = require('js-levenshtein');
  * @param s1 the first string
  * @param s2 the second string
  */
-export function metriclc(s1:string,s2:string){
-  return jslevenshtein(s1,s2);
-}
 
 export function metriclcs(s1: string, s2: string) {
-    const s1_length = s1.length;
-    const s2_length = s2.length;
-    const x = s1.split("");
-    const y = s2.split("");
+    const s1_length: number = s1.length;
+    const s2_length: number = s2.length;
+    const x: string[] = s1.split("");
+    const y: string[] = s2.split("");
     //init array
     const c = Array(s1_length + 1).fill(Array(s2_length + 1).fill(0));
   
@@ -26,7 +22,8 @@ export function metriclcs(s1: string, s2: string) {
         c[i][j] = x[i - 1] === y[j - 1] ? c[i - 1][j - 1] + 1 : Math.max(c[i][j - 1], c[i - 1][j]);
       }
     }
-    return c[s1_length][s2_length];
+    let lcs = c[s1_length][s2_length];
+    return (s1_length - lcs) + (s2_length - lcs);
   }
   /*
   let a = "this is a short sentence and this is a long sentence and this is a medium sentence Naive implementation based on wikipedia article on Wagner-Fischer Algorithm and text in Skiena pdfpdppdfad df Returns a new CharStream representing the head of the input at the current position.  Throws an exception if the CharStream isempty. asdfasdfoefjawepqoepkmvjcxnaikmlsdjfkmewa fkdfmadsf oewa f w49r23rmr p sat takes a predicate and yields a parser that consumes a* single character if the character satisfies the predicate,* otherwise it fails.fgsdgsfd sdfgsfgsfdgsdgdf=a-0g-e-34t=wr-gwreg ggg3gseg4g30w4g-irojg4gokwij43g gj 3-ko3rfw3r gjw3ij pjw3gwjg w43gjw4 g-93wjw-34g9-w43 jg4-w g-wjg-wjg4-w4gjw-3 g-94wjg-wj4-w4 gjg-jg-wjgw3g-jg rg34u 34h89t9gh0rghgrkgfgm m mdkandf pjff"
