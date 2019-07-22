@@ -14,23 +14,25 @@ export function metriclcs(s1: string, s2: string): string[] {
     let s2_length: number = s2.length;
     let x: string[] = s1.split("");
     let y: string[] = s2.split("");
-    console.log(x)
-    console.log(y)
     //init array
-    let c = Array(s1_length + 1).fill(Array(s2_length + 1).fill(0));
+    let c : Array<number[]> = [];
+    for (let i = 0; i <= s1_length; i++) {
+      let row : number[] = []; 
+      c.push(row);
+      for (let j = 0; j <= s2_length; j++) {
+        c[i].push(0);
+      }
+    }
     console.log(c);
+
 
     for (let i = 1; i <= s1_length; i++) {
       for (let j = 1; j <= s2_length; j++) {
         c[i][j] = (x[i-1] == y[j-1]) ? (c[i - 1][j - 1] + 1) : Math.max(c[i][j - 1], c[i - 1][j]);
-        //console.log("\n");
-        //console.log(c);
       }
     }
     console.log(c);
     return backtrack(c, x, y, s1_length-1, s2_length-1, []);
-    //let lcs = c[s1_length][s2_length];
-    //return (s1_length - lcs) + (s2_length - lcs);
   }
 
   function backtrack(c: number[][], s1: string[], s2: string[], i: number, j: number, edits: string[]): string[] {
@@ -63,8 +65,8 @@ export function metriclcs(s1: string, s2: string): string[] {
     return edits;
   }
 
-  let a = "varr";
-  let b = "arr ";
+  let a = "kitten";
+  let b = "sittin";
   console.log(metriclcs(a,b))
   /*
   let a = "this is a short sentence and this is a long sentence and this is a medium sentence Naive implementation based on wikipedia article on Wagner-Fischer Algorithm and text in Skiena pdfpdppdfad df Returns a new CharStream representing the head of the input at the current position.  Throws an exception if the CharStream isempty. asdfasdfoefjawepqoepkmvjcxnaikmlsdjfkmewa fkdfmadsf oewa f w49r23rmr p sat takes a predicate and yields a parser that consumes a* single character if the character satisfies the predicate,* otherwise it fails.fgsdgsfd sdfgsfgsfdgsdgdf=a-0g-e-34t=wr-gwreg ggg3gseg4g30w4g-irojg4gokwij43g gj 3-ko3rfw3r gjw3ij pjw3gwjg w43gjw4 g-93wjw-34g9-w43 jg4-w g-wjg-wjg4-w4gjw-3 g-94wjg-wj4-w4 gjg-jg-wjgw3g-jg rg34u 34h89t9gh0rghgrkgfgm m mdkandf pjff"
