@@ -9,11 +9,11 @@ const jslevenshtein = require('js-levenshtein');
  * @param s1 the first string
  * @param s2 the second string
  */
-export function metriclcs(s1:string,s2:string){
+export function metriclc(s1:string,s2:string){
   return jslevenshtein(s1,s2);
 }
 
-export function metriclc(s1: string, s2: string) {
+export function metriclcs(s1: string, s2: string) {
     const s1_length = s1.length;
     const s2_length = s2.length;
     const x = s1.split("");
