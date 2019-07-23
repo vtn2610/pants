@@ -68,9 +68,11 @@ export function metriclcs(s1: string, s2: string): edit[] {
     return edits;
   }
 
+  /*
   let a = "ar_";
   let b = "var";
   console.log(metriclcs(a,b))
   let c = "kittena";
   let d = "sittinb";
   console.log(metriclcs(c,d))
+  */

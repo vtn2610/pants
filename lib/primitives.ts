@@ -296,8 +296,8 @@ export namespace Primitives {
                                 break;
                             case "failure":
 
-                                let o1Edit = LCSParse(p1, 0, istream, o.error.expectedStr().length);
-                                let o2Edit = LCSParse(p2, 0, istream, o2.error.expectedStr().length);
+                                let o1Edit = LCSParse(p1, 0, istream);
+                                let o2Edit = LCSParse(p2, 0, istream);
                                 return (o2Edit > o1Edit) ? o : o2;
 
                         }
@@ -326,7 +326,7 @@ export namespace Primitives {
     }
 
     //performs the force parse, and returns ultimately the LCS length
-    export function LCSParse<T>(p: IParser<T>, LCS: number = 0, istream : CharStream, windowSize : number): number {
+    export function LCSParse<T>(p: IParser<T>, LCS: number = 0, istream : CharStream): number {
         if (!istream.isEmpty()) {
             let istream2 = istream;
                 let o = p(istream2);
@@ -337,40 +337,45 @@ export namespace Primitives {
                     case "failure":
                         let e = <Failure> o;
                         let str = istream2.toString();
+                        let windowSize = e.error.expectedStr().length
                         let inputBound = str.substring(e.error_pos, e.error_pos + windowSize);
-                        
                         let edits : edit[] = e.error.minEdit(inputBound, e.error.expectedStr());
                         let maxEdit : number = edits.length;
-
-                        while (edits.length > 0 ) {
+                        let newEdit : string = "";
+                        if ( edits.length > 0 ) {
                             let curEdit : edit | undefined = edits.shift();
+                            if (curEdit !== undefined && curEdit.char == " "){
+                                newEdit = " ";
+                                break;
+                            }
                             // case of insertion
                             if (curEdit !== undefined && curEdit.sign === true) { 
-                                let newEdit : string = inputBound.substring(0, curEdit.pos) + curEdit.char + inputBound.substring(curEdit.pos);
+                                newEdit = inputBound.substring(0, curEdit.pos) + curEdit.char + inputBound.substring(curEdit.pos);
                                 for (let item of edits) {
-                                    ++item.pos;
+                                    item.pos++;
                                 }
-                                str = str.substring(0, e.error_pos) + newEdit + str.substring(e.error_pos + newEdit.length);
-                                return LCSParse(p, LCS, new CharStream(str), newEdit.length);
+
                             // case of deletion
                             } else if (curEdit !== undefined && curEdit.sign === false) {
-                                let newEdit = inputBound.substring(0, curEdit.pos) + inputBound.substring(curEdit.pos + 1);
+                                newEdit = inputBound.substring(0, curEdit.pos) + inputBound.substring(curEdit.pos+1);
                                 for (let item of edits) {
-                                    --item.pos;
+                                    item.pos--;
                                 }
-                                str = str.substring(0, e.error_pos) + newEdit + str.substring(e.error_pos + newEdit.length);
-                                return LCSParse(p, LCS, new CharStream(str), newEdit.length);
+
                             }
                         }
-                        console.log(maxEdit);
+                        
                         LCS += maxEdit - edits.length;
-                        str = str.substring(0, e.error_pos) + e.error.expectedStr() + str.substring(e.error_pos + windowSize);
-                        return LCSParse(p, LCS, new CharStream(str), windowSize);
+                        str = str.substring(0, e.error_pos) + newEdit + str.substring(e.error_pos + windowSize);
+                        console.log(str);
+                        return LCSParse(p, LCS, new CharStream(str));
                         //calculate LCS, replace istream, and call LCSParse on same parser
             }
         }
         return LCS
         }
+
+        
     /**
      * appfun allows the user to apply a function f to
      * the result of a parser p, assuming that p is successful.
