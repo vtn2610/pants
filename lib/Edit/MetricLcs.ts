@@ -8,7 +8,15 @@
  * @param s2 the second string
  */
 
-export function metriclcs(s1: string, s2: string): string[] {
+ /*
+  * edit type for choice method in primitives
+  * sign : true for insertion
+  * char : the character
+  * pos : the index
+  */ 
+export type edit = { sign : boolean, char : string, pos : number}
+
+export function metriclcs(s1: string, s2: string): edit[] {
     let s1_length: number = s1.length;
     let s2_length: number = s2.length;
     let x: string[] = s1.split("");
@@ -28,7 +36,7 @@ export function metriclcs(s1: string, s2: string): string[] {
         c[i][j] = (x[i-1] == y[j-1]) ? (c[i - 1][j - 1] + 1) : Math.max(c[i][j - 1], c[i - 1][j]);
       }
     }
-    return diff(c, x, y, s1_length, s2_length, []);
+    return diff(c, x, y, s1_length, s2_length, Array<edit>());
   }
 
   function backtrack(c: number[][], s1: string[], s2: string[], i: number, j: number, edits: string[]): string[] {
@@ -45,17 +53,17 @@ export function metriclcs(s1: string, s2: string): string[] {
     return backtrack(c, s1, s2, i-1, j, edits)
   }
 
-  function diff(c: number[][], s1: string[], s2: string[], i: number, j: number, edits: string[]): string[]{
+  function diff(c: number[][], s1: string[], s2: string[], i: number, j: number, edits: edit[]): edit[]{
     if (i > 0 && j > 0 && s1[i-1] === s2[j-1]){
       diff(c, s1, s2, i-1, j-1, edits);
     }
     else if (i > 0 && (j == 0 || c[i][j-1] <= c[i-1][j])){
       diff(c, s1, s2, i-1, j, edits);
-      edits.push("-" + s1[i-1] + (i-1));
+      edits.push({ sign : false, char : s1[i-1], pos : (i-1) });
     }
     else if ( j > 0 && (i == 0 || c[i][j-1] > c[i-1][j])){
       diff(c, s1, s2, i, j-1, edits);
-      edits.push("+" + s2[j-1] + (j-1));
+      edits.push({ sign: true, char : s2[j-1], pos : (j-1) });
     }
     return edits;
   }

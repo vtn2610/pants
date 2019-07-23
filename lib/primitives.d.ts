@@ -155,7 +155,7 @@ export declare namespace Primitives {
      * @param parsers An array of parsers to try
      */
     function choices<T>(...parsers: IParser<T>[]): IParser<T>;
-    function LCSParse<T>(p: IParser<T>, LCS: number | undefined, istream: CharStream): number;
+    function LCSParse<T>(p: IParser<T>, LCS: number | undefined, istream: CharStream, windowSize: number): number;
     /**
      * appfun allows the user to apply a function f to
      * the result of a parser p, assuming that p is successful.

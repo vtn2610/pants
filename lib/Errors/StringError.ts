@@ -1,6 +1,6 @@
 import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { metriclcs } from "../Edit/MetricLcs";
+import { metriclcs, edit } from "../Edit/MetricLcs";
 
 export class StringError implements ErrorType {
     public _expectedStr : string;
@@ -17,7 +17,7 @@ export class StringError implements ErrorType {
         return "string " + " ' " + this._expectedStr + " ' "; 
     }
 
-    minEdit(input: string, expectedStr: string) : string[] {
+    minEdit(input: string, expectedStr: string) : edit[] {
         return metriclcs(input, expectedStr);
     }
 

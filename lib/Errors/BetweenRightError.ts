@@ -1,5 +1,6 @@
 import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
+import { edit } from "../Edit/MetricLcs";
 
 export class BetweenRightError implements ErrorType {
     private _rootCause : ErrorType;
@@ -16,7 +17,7 @@ export class BetweenRightError implements ErrorType {
         return "right part";
     }
 
-    minEdit(input: string, expectedStr: string = "") : number {
+    minEdit(input: string, expectedStr: string = "") : edit[] {
         return this._rootCause.minEdit(input, expectedStr);
     }
 

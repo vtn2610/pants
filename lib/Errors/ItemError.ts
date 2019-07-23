@@ -1,6 +1,6 @@
 import { ErrorType } from "./ErrorType";
 import { Option, Some, None } from "space-lift";
-import { metriclcs } from "../Edit/MetricLcs";
+import { metriclcs, edit } from "../Edit/MetricLcs";
 
 export class ItemError implements ErrorType {
 
@@ -12,7 +12,7 @@ export class ItemError implements ErrorType {
         return "";
     }
 
-    minEdit(input: string, expectedStr: string) : string[] {
+    minEdit(input: string, expectedStr: string) : edit[] {
         return metriclcs(input, expectedStr);
     }
 
