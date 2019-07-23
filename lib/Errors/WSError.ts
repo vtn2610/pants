@@ -12,7 +12,7 @@ export class WSError implements ErrorType {
         return "white space";
     }
 
-    minEdit(input: string, expectedStr: string) : number {
+    minEdit(input: string, expectedStr: string) : string[] {
         return metriclcs(input, expectedStr);
     }
 

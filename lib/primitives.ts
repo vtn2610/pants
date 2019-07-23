@@ -337,7 +337,7 @@ export namespace Primitives {
                         let e = <Failure> o;
                         let str = istream2.toString();
                         let str1 = str.substring(e.error_pos, e.error_pos + e.error.expectedStr().length);
-                        LCS += str1.length - e.error.minEdit(str1, e.error.expectedStr());
+                        LCS += str1.length - e.error.minEdit(str1, e.error.expectedStr()).length;
                         str = str.substring(0, e.error_pos) + e.error.expectedStr() + str.substring(e.error_pos + e.error.expectedStr().length);
                         return LCSParse(p, LCS, new CharStream(str));
                         //calculate LCS, replace istream, and call LCSParse on same parser

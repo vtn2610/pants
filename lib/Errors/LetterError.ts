@@ -1,7 +1,6 @@
 import { ErrorType } from "./ErrorType";
 import { Option, Some, None } from "space-lift";
-const jslevenshtein = require('js-levenshtein');
-const metriclcs = require('metric-lcs');
+import { metriclcs } from "../Edit/MetricLcs";
 
 export class LetterError implements ErrorType {
 
@@ -13,7 +12,7 @@ export class LetterError implements ErrorType {
         return "letter";
     }
 
-    minEdit(input: string, expectedStr: string) : number {
+    minEdit(input: string, expectedStr: string) : string[] {
         return metriclcs(input, expectedStr);
     }
 

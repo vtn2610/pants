@@ -17,7 +17,7 @@ export class StringError implements ErrorType {
         return "string " + " ' " + this._expectedStr + " ' "; 
     }
 
-    minEdit(input: string, expectedStr: string) : number {
+    minEdit(input: string, expectedStr: string) : string[] {
         return metriclcs(input, expectedStr);
     }
 

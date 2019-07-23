@@ -18,7 +18,7 @@ export class CharError implements ErrorType {
         return "character " + " ' " + this._expectedChar + " ' "; 
     }
 
-    minEdit(input: string, expectedStr: string) : number {
+    minEdit(input: string, expectedStr: string) : string[] { //(boolean,string,number)[]
         return metriclcs(input, expectedStr);
     }
 

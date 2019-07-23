@@ -12,8 +12,8 @@ export class ItemError implements ErrorType {
         return "";
     }
 
-    minEdit(input: string, expectedStr: string) : number {
-        return metriclcs (input, expectedStr);
+    minEdit(input: string, expectedStr: string) : string[] {
+        return metriclcs(input, expectedStr);
     }
 
     expectedStr() : string {

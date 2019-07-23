@@ -12,7 +12,7 @@ export class DigitError implements ErrorType {
         return "number";
     }
 
-    minEdit(input: string, expectedStr: string) : number {
+    minEdit(input: string, expectedStr: string) : string[] {
         return metriclcs(input, expectedStr);
     }
 
