@@ -1,9 +1,8 @@
-import { string } from "space-lift/commonjs/object/is";
-
 /*
- * Return the length of Longest Common Subsequence (LCS) between strings s1 and s2.
- * Also returns the sequence of edits, starting with insertion, then deletions
- * sorted by position
+ * Return the LCS (Longest Common Subsequence) Distance between two strings s1 and s2
+ * The distance is a metric, and is the value (s1-lcs) + (s2 - lcs)
+ * Can also return the sequence of edits with insertions preceding deletions
+ * sorted by position, as well as the LCS string itself
  * 
  * @param s1 the first string
  * @param s2 the second string
@@ -52,11 +51,11 @@ export function metriclcs(s1: string, s2: string): string[] {
     }
     else if (i > 0 && (j == 0 || c[i][j-1] <= c[i-1][j])){
       diff(c, s1, s2, i-1, j, edits);
-      edits.push("-" + s1[i-1]);
+      edits.push("-" + s1[i-1] + (i-1));
     }
     else if ( j > 0 && (i == 0 || c[i][j-1] > c[i-1][j])){
       diff(c, s1, s2, i, j-1, edits);
-      edits.push("+" + s2[j-1]);
+      edits.push("+" + s2[j-1] + (j-1));
     }
     return edits;
   }
