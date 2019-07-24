@@ -125,7 +125,7 @@ export namespace Primitives {
                         return outcome;
                     case "failure":
                         let edits : [number,CharStream] = editParse(parser, istream, outcome.error.edit);
-                        f(outcome.error).edit = outcome.error.edit + edits[0];
+                        outcome.error.edit += edits[0];
                         return new Failure(edits[1], istream.startpos, f(outcome.error));
                 }
             }
@@ -295,18 +295,22 @@ export namespace Primitives {
                             case "success":
                                 break;
                             case "failure":
-                                let oFail = expect(p1)((error : ErrorType) => new ;
+                                //Get the failure object from both parsers
+                                let o1Fail = (<Failure>expect(p1)((error : ErrorType)  => error)(istream));
+                                let o2Fail = (<Failure>expect(p1)((error : ErrorType) => error)(istream));
                                 
-                                let o1Edit = editParse(p1, 0, istream);
-                                let o2Edit = editParse(p2, 0, istream);
-                                if (o2Edit[0] > o1Edit[0]){
+                                //Get the edit distance from both failures
+                                let o1Edit = o1Fail.error.edit;
+                                let o2Edit = o2Fail.error.edit;
+                                
+                                if (o2Edit > o1Edit){
                                     // p1 has the smallest edit distance
-                                    console.log(o1Edit[1])
-                                    return new Failure(o1Edit[1], o.error_pos, o.error);
+                                    console.log(o1Edit)
+                                    return new Failure(o1Fail.inputstream, o.error_pos, o.error);
                                 } else {
                                     // p2 has the smallest edit distance
-                                    console.log(o2Edit[1])
-                                    return new Failure(o2Edit[1], o2.error_pos, o2.error);
+                                    console.log(o2Edit)
+                                    return new Failure(o2Fail.inputstream, o2.error_pos, o2.error);
                                 }
                         }
                         return o2;

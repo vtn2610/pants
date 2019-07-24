@@ -9,11 +9,11 @@ export class DigitError implements ErrorType {
         this._editDistance = editDistance;
     }
 
-    getEdit(): number {
+    get edit(): number {
         return this._editDistance;
     }
 
-    setEdit(d: number): void{
+    set edit(d: number){
         this._editDistance = d;
     }
 
