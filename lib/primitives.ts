@@ -125,7 +125,10 @@ export namespace Primitives {
                         return outcome;
                     case "failure":
                         let edits : [number,CharStream] = editParse(parser, istream, outcome.error.edit);
+                        console.log("error.edit: " + outcome.error.edit)
+                        console.log("edits[0]: " + edits[0])
                         outcome.error.edit += edits[0];
+                        console.log("f(outcome.error): " + f(outcome.error).edit)
                         return new Failure(edits[1], istream.startpos, f(outcome.error));
                 }
             }
@@ -140,7 +143,7 @@ export namespace Primitives {
         return (istream: CharStream) => {
             if (istream.isEmpty()) {
                 //edit distance is 1 because you are missing something
-                return new Failure(istream, istream.startpos, new ItemError(1));
+                return new Failure(istream, istream.startpos, new ItemError(0));
             } else {
                 let remaining = istream.tail(); // remaining string;
                 let res = istream.head(); // result of parse;
@@ -388,14 +391,12 @@ export namespace Primitives {
                         }
                         LCS += maxEdit - edits.length;
                         str = str.substring(0, e.error_pos) + newEdit + str.substring(e.error_pos + windowSize);
-                        istream2 = new CharStream(str);
-                        return editParse(p, istream2, LCS);
+                        return editParse(p, new CharStream(str), LCS);
                         //calculate LCS, replace istream, and call LCSParse on same parser
             }
         }
         return [LCS, istream];
     }
-
         
     /**
      * appfun allows the user to apply a function f to
