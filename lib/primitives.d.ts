@@ -1,6 +1,7 @@
 import { CharUtil } from "./charstream";
 import CharStream = CharUtil.CharStream;
 import { ErrorType } from "./Errors/ErrorType";
+import { edit } from "./Edit/MetricLcs";
 export declare namespace Primitives {
     class EOFMark {
         private static _instance;
@@ -146,7 +147,7 @@ export declare namespace Primitives {
      * @param parsers An array of parsers to try
      */
     function choices<T>(...parsers: IParser<T>[]): IParser<T>;
-    function editParse<T>(p: IParser<T>, istream: CharStream, LCS: number): [number, CharStream];
+    function editParse<T>(p: IParser<T>, istream: CharStream, LCS: number, windowSize: number, edits: edit[]): [number, CharStream];
     /**
      * appfun allows the user to apply a function f to
      * the result of a parser p, assuming that p is successful.
