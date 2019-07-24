@@ -5,8 +5,7 @@ export declare class SatError implements ErrorType {
     private _expectedStr;
     _editDistance: number;
     constructor(expectedStr: string[], editDistance: number);
-    getEdit(): number;
-    setEdit(d: number): void;
+    edit: number;
     rootCause(): Option<ErrorType>;
     readonly errors: string[];
     explanation(): string;

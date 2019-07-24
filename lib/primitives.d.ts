@@ -74,11 +74,7 @@ export declare namespace Primitives {
      * @param f A function that produces a new Errors given an existing Errors
      */
     function expect<T>(parser: IParser<T>): (f: EComposer) => IParser<T>;
-    /**
-     * item successfully consumes the first character if the input
-     * string is non-empty, otherwise it fails.
-     */
-    function item(): (istream: CharUtil.CharStream) => Outcome<CharUtil.CharStream>;
+    function item(): IParser<CharUtil.CharStream>;
     /**
      * bind is a curried function that takes a parser p and returns
      * a function that takes a parser f which returns the composition
@@ -97,11 +93,6 @@ export declare namespace Primitives {
      * @param p A parser
      */
     function seq<T, U, V>(p: IParser<T>): (q: IParser<U>) => (f: (e: [T, U]) => V) => (istream: CharUtil.CharStream) => Outcome<V>;
-    /**
-     * sat takes a predicate and yields a parser that consumes a
-     * single character if the character satisfies the predicate,
-     * otherwise it fails.
-     */
     function sat(char_class: string[]): IParser<CharStream>;
     /**
      * char takes a character and yields a parser that consume
@@ -155,7 +146,7 @@ export declare namespace Primitives {
      * @param parsers An array of parsers to try
      */
     function choices<T>(...parsers: IParser<T>[]): IParser<T>;
-    function editParse<T>(p: IParser<T>, LCS: number, istream: CharStream): [number, CharStream];
+    function editParse<T>(p: IParser<T>, istream: CharStream, LCS: number): [number, CharStream];
     /**
      * appfun allows the user to apply a function f to
      * the result of a parser p, assuming that p is successful.

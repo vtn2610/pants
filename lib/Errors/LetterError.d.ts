@@ -4,8 +4,7 @@ import { edit } from "../Edit/MetricLcs";
 export declare class LetterError implements ErrorType {
     _editDistance: number;
     constructor(editDistance: number);
-    getEdit(): number;
-    setEdit(d: number): void;
+    edit: number;
     rootCause(): Option<ErrorType>;
     explanation(): string;
     minEdit(input: string, expectedStr: string): edit[];

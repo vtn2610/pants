@@ -352,8 +352,8 @@ export namespace Primitives {
     }
     //performs the force parse, and returns ultimately the LCS length
     export function editParse<T>(p: IParser<T>, istream : CharStream, LCS: number): [number,CharStream] {
-        let istream2 = istream;
-        if (!istream2.isEmpty()) {
+        if (!istream.isEmpty()) {
+            let istream2 = istream;
             let o = p(istream2);
                 switch (o.tag) {
                     case "success":
@@ -392,10 +392,8 @@ export namespace Primitives {
                         return editParse(p, istream2, LCS);
                         //calculate LCS, replace istream, and call LCSParse on same parser
             }
-
         }
-
-        return [LCS, istream2];
+        return [LCS, istream];
     }
 
         
@@ -490,7 +488,7 @@ export namespace Primitives {
      */
     export function eof(): IParser<EOFMark> {
         return (istream: CharStream) => {
-            return istream.isEOF() ? new Success(istream, EOF) : new Failure(istream, istream.startpos, new StringError("EOF Error",0));
+            return istream.isEOF() ? new Success(istream, EOF) : new Failure(istream, istream.startpos, new StringError("EOF Error", istream.length()));
         }
     }
 
@@ -665,7 +663,7 @@ export namespace Primitives {
                     }
                 }
             }
-            return new Failure(istream, istream.startpos, new StringError(<string>istream.substring(istream.startpos, istream.endpos).input,));
+            return new Failure(istream, istream.startpos, new StringError(<string>istream.substring(istream.startpos, istream.endpos).input,0));
         }
     }
 }
