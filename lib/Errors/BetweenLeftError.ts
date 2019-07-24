@@ -4,11 +4,21 @@ import { edit } from "../Edit/MetricLcs";
 
 export class BetweenLeftError implements ErrorType {
     private _rootCause : ErrorType;
+    public _editDistance : number;
     
-    constructor(rootCause : ErrorType) {
+    constructor(rootCause : ErrorType, editDistance : number) {
         this._rootCause = rootCause;
+        this._editDistance = editDistance;
     }
 
+    get edit(): number {
+        return this._editDistance;
+    }
+
+    set edit(d: number){
+        this._editDistance = d;
+    }
+    
     rootCause() : Option<ErrorType> {
         return Some(this._rootCause);
     }

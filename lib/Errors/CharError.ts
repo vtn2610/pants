@@ -4,9 +4,19 @@ import { metriclcs, edit } from "../Edit/MetricLcs";
 
 export class CharError implements ErrorType {
     private _expectedChar : string;
+    public _editDistance : number;
 
-    constructor(expectedChar : string) {
+    constructor(expectedChar : string, editDistance : number) {
         this._expectedChar = expectedChar;
+        this._editDistance = editDistance;
+    }
+
+    getEdit(): number {
+        return this._editDistance;
+    }
+
+    setEdit(d: number): void{
+        this._editDistance = d;
     }
 
     rootCause() : Option<ErrorType> {

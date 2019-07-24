@@ -3,7 +3,10 @@ import { ErrorType } from "./ErrorType";
 import { edit } from "../Edit/MetricLcs";
 export declare class CharError implements ErrorType {
     private _expectedChar;
-    constructor(expectedChar: string);
+    _editDistance: number;
+    constructor(expectedChar: string, editDistance: number);
+    getEdit(): number;
+    setEdit(d: number): void;
     rootCause(): Option<ErrorType>;
     explanation(): string;
     minEdit(input: string, expectedStr: string): edit[];

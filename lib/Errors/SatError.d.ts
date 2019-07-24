@@ -3,7 +3,10 @@ import { ErrorType } from "./ErrorType";
 import { edit } from "../Edit/MetricLcs";
 export declare class SatError implements ErrorType {
     private _expectedStr;
-    constructor(expectedStr: string[]);
+    _editDistance: number;
+    constructor(expectedStr: string[], editDistance: number);
+    getEdit(): number;
+    setEdit(d: number): void;
     rootCause(): Option<ErrorType>;
     readonly errors: string[];
     explanation(): string;

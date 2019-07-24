@@ -5,4 +5,6 @@ export interface ErrorType {
     explanation(): string;
     minEdit(input: string, expectedStr: string): edit[];
     expectedStr(): string;
+    getEdit(): number;
+    setEdit(d: number): void;
 }

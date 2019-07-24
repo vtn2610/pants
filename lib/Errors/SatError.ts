@@ -4,9 +4,19 @@ import { edit } from "../Edit/MetricLcs";
 
 export class SatError implements ErrorType {
     private _expectedStr : string[];
+    public _editDistance : number;
 
-    constructor(expectedStr : string[]) {
+    constructor(expectedStr : string[], editDistance : number) {
         this._expectedStr = expectedStr;
+        this._editDistance = editDistance;
+    }
+
+    get edit(): number {
+        return this._editDistance;
+    }
+
+    set edit(d: number){
+        this._editDistance = d;
     }
 
     rootCause() : Option<ErrorType> {

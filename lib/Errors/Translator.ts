@@ -14,7 +14,7 @@ export class Translator {
         do {
             result += finger.explanation();
             result += " ";
-            finger = finger.rootCause().getOrElse(new ItemError());
+            finger = finger.rootCause().getOrElse(new ItemError(0));
         } while (finger.rootCause().isDefined())
         result += finger.explanation();
 
