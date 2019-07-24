@@ -296,8 +296,8 @@ export namespace Primitives {
                                 break;
                             case "failure":
 
-                                let o1Edit = LCSParse(p1, 0, istream);
-                                let o2Edit = LCSParse(p2, 0, istream);
+                                let o1Edit = LCSParse(p1, 0, istream)[0];
+                                let o2Edit = LCSParse(p2, 0, istream)[0];
                                 return (o2Edit > o1Edit) ? o : o2;
 
                         }
@@ -326,7 +326,7 @@ export namespace Primitives {
     }
 
     //performs the force parse, and returns ultimately the LCS length
-    export function LCSParse<T>(p: IParser<T>, LCS: number = 0, istream : CharStream): number {
+    export function LCSParse<T>(p: IParser<T>, LCS: number = 0, istream : CharStream): [number,string] {
         if (!istream.isEmpty()) {
             let istream2 = istream;
                 let o = p(istream2);
@@ -345,8 +345,8 @@ export namespace Primitives {
                         if ( edits.length > 0 ) {
                             let curEdit : edit | undefined = edits.shift();
                             if (curEdit !== undefined && curEdit.char == " "){
-                                newEdit = " ";
-                                break;
+                               newEdit = " ";
+                               break;
                             }
                             // case of insertion
                             if (curEdit !== undefined && curEdit.sign === true) { 
@@ -367,12 +367,12 @@ export namespace Primitives {
                         
                         LCS += maxEdit - edits.length;
                         str = str.substring(0, e.error_pos) + newEdit + str.substring(e.error_pos + windowSize);
-                        console.log(str);
+                        //console.log(str);
                         return LCSParse(p, LCS, new CharStream(str));
                         //calculate LCS, replace istream, and call LCSParse on same parser
             }
         }
-        return LCS
+        return [LCS,istream.toString()]
         }
 
         
@@ -467,7 +467,7 @@ export namespace Primitives {
      */
     export function eof(): IParser<EOFMark> {
         return (istream: CharStream) => {
-            return istream.isEOF() ? new Success(istream, EOF) : new Failure(istream, istream.startpos, new StringError("EOF Error"));
+            return istream.isEOF() ? new Success(istream, EOF) : new Failure(istream, istream.startpos, new StringError(" "));
         }
     }
 
