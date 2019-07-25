@@ -124,10 +124,14 @@ export namespace Primitives {
                     case "success":
                         return outcome;
                     case "failure":
+                        console.log("editD: " + outcome.error.edit)
+                        console.log("eString: " + outcome.error.expectedStr())
                         let edits : [number,CharStream] = editParse(parser, istream, outcome.error.edit, outcome.error.expectedStr().length, []);
                         //console.log("error.edit: " + outcome.error.edit)
                         //console.log("edits[0]: " + edits[0])
                         outcome.error.edit = edits[0];
+                        console.log(edits[1].toString())
+                        //console.log(edits[1].toString())
                         //console.log("f(outcome.error): " + f(outcome.error).edit)
                         return new Failure(edits[1], istream.startpos, f(outcome.error));
                 }
@@ -166,11 +170,10 @@ export namespace Primitives {
     export function bind<T, U>(p: IParser<T>) {
         return (f: (t: T) => IParser<U>) => {
             return (istream: CharStream) => {
-                let r = expect(p)((error : ErrorType) => error)(istream);
+                let r = (p)((istream));
                 switch (r.tag) {
                     case "success":
-                        return expect(f(r.result))((error : ErrorType) => error)(r.inputstream);
-    /*
+                        let o = f(r.result)(r.inputstream);
                         switch (o.tag) {
                             case "success":
                                 break;
@@ -178,9 +181,8 @@ export namespace Primitives {
                                 return new Failure(istream, o.error_pos, o.error);
                         }
                         return o;
-    */
                     case "failure":
-                        return r; //new Failure(istream, r.error_pos, r.error);
+                        return new Failure(istream, r.error_pos, r.error);
                 }
             }
         }
@@ -275,7 +277,7 @@ export namespace Primitives {
      * if that character is uppercase.
      */
     export function upper(): IParser<CharStream> {
-        return _sat(upper_chars());
+        return sat(upper_chars());
     }
 
     /**
@@ -283,7 +285,7 @@ export namespace Primitives {
      * if that character is lowercase.
      */
     export function lower(): IParser<CharStream> {
-        return _sat(lower_chars());
+        return sat(lower_chars());
     }
 
     /**
@@ -320,11 +322,11 @@ export namespace Primitives {
 
                                 if (o2Edit > o1Edit){
                                     // p1 has the smallest edit distance
-                                    console.log(o1Edit)
+                                    //console.log("choice: "+ o1Edit)
                                     return new Failure(o1Fail.inputstream, o.error_pos, o.error);
                                 } else {
                                     // p2 has the smallest edit distance
-                                    console.log(o2Edit)
+                                    //console.log("choice2: " + o2Edit)
                                     return new Failure(o2Fail.inputstream, o2.error_pos, o2.error);
                                 }
                         }
@@ -388,7 +390,8 @@ export namespace Primitives {
                                 }
                             }
                         }
-                        LCS += maxEdit - edits.length;
+                        LCS ++;
+                        //console.log(LCS)
                         str = str.substring(0, e.error_pos) + newEdit + str.substring(e.error_pos + windowSize);
                         return editParse(p, new CharStream(str), LCS, newEdit.length, edits);
                         //calculate LCS, replace istream, and call LCSParse on same parser
