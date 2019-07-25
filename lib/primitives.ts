@@ -296,9 +296,10 @@ export namespace Primitives {
                                 break;
                             case "failure":
 
-                                let o1Edit = LCSParse(p1, 0, istream)[0];
-                                let o2Edit = LCSParse(p2, 0, istream)[0];
-                                return (o2Edit > o1Edit) ? o : o2;
+                                let o1Edit = editParse(p1, 0, istream, o.error_pos, o.error.expectedStr().length, []);
+                                let o2Edit = editParse(p2, 0, istream, o.error_pos, o2.error.expectedStr().length, []);
+                                
+                                return (o2Edit[0] > o1Edit[0]) ? o : o2;
 
                         }
                         return o2;
@@ -326,50 +327,50 @@ export namespace Primitives {
     }
 
     //performs the force parse, and returns ultimately the LCS length
-    export function LCSParse<T>(p: IParser<T>, LCS: number = 0, istream : CharStream): [number,string] {
+    export function editParse<T>(p: IParser<T>, LCS: number = 0, istream : CharStream, errorpos : number, windowSize : number, edits : edit[]): [number,string] {
         if (!istream.isEmpty()) {
-            let istream2 = istream;
-                let o = p(istream2);
-                switch (o.tag) {
-                    case "success":
-                        break;
-                        //Keep parsing with next parser
-                    case "failure":
-                        let e = <Failure> o;
-                        let str = istream2.toString();
-                        let windowSize = e.error.expectedStr().length
-                        let inputBound = str.substring(e.error_pos, e.error_pos + windowSize);
-                        let edits : edit[] = e.error.minEdit(inputBound, e.error.expectedStr());
-                        let maxEdit : number = edits.length;
-                        let newEdit : string = "";
-                        if ( edits.length > 0 ) {
-                            let curEdit : edit | undefined = edits.shift();
-                            if (curEdit !== undefined && curEdit.char == " "){
-                               newEdit = " ";
-                               break;
-                            }
-                            // case of insertion
-                            if (curEdit !== undefined && curEdit.sign === true) { 
-                                newEdit = inputBound.substring(0, curEdit.pos) + curEdit.char + inputBound.substring(curEdit.pos);
-                                for (let item of edits) {
-                                    item.pos++;
-                                }
+            let o = p(istream);
+            switch (o.tag) {
+                case "success":
+                    //Keep parsing with next parser
+                    break;
+                case "failure":
+                    //calculate LCS, replace istream, and call LCSParse on same parser
+                    let e = <Failure> o;
+                    let str = istream.toString();
+                    let inputBound = ""; 
+                    let newEdit : string = "";
 
-                            // case of deletion
-                            } else if (curEdit !== undefined && curEdit.sign === false) {
-                                newEdit = inputBound.substring(0, curEdit.pos) + inputBound.substring(curEdit.pos+1);
-                                for (let item of edits) {
-                                    item.pos--;
-                                }
+                    // if done with edits, or if the prev error is fixed by more than one index, move on
+                    if (edits.length == 0 || e.error_pos > errorpos + 1) {
+                        errorpos = e.error_pos;
+                        windowSize = e.error.expectedStr().length
+                        inputBound = str.substring(errorpos, errorpos + windowSize);
+                        edits = e.error.minEdit(inputBound, e.error.expectedStr());
+                        return editParse(p, LCS, new CharStream(str), errorpos, windowSize, edits);
+                    }
 
-                            }
+                    // if edits.length > 0 and error at current pos is not fixed, shift error list and fix it
+                    else {
+                        inputBound = str.substring(errorpos, errorpos + windowSize);
+                        let curEdit : edit | undefined = edits.shift();
+                        // case of insertion
+                        if (curEdit !== undefined && curEdit.sign === true) { 
+                            newEdit = inputBound.substring(0, curEdit.pos) + curEdit.char + inputBound.substring(curEdit.pos);
+                            for (let item of edits) item.pos++; //increment all the remaining pos 
+
+                        // case of deletion
+                        } else if (curEdit !== undefined && curEdit.sign === false) {
+                            newEdit = inputBound.substring(0, curEdit.pos) + inputBound.substring(curEdit.pos + 1);
+                            for (let item of edits) item.pos--; //decrement all the remaining pos
                         }
+
+                        LCS++;
+                        //concatenate the new substring
+                        str = str.substring(0, errorpos) + newEdit + str.substring(errorpos + windowSize);
                         
-                        LCS += maxEdit - edits.length;
-                        str = str.substring(0, e.error_pos) + newEdit + str.substring(e.error_pos + windowSize);
-                        //console.log(str);
-                        return LCSParse(p, LCS, new CharStream(str));
-                        //calculate LCS, replace istream, and call LCSParse on same parser
+                        return editParse(p, LCS, new CharStream(str), errorpos, newEdit.length, edits);
+                    }
             }
         }
         return [LCS,istream.toString()]
