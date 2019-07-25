@@ -124,13 +124,13 @@ export namespace Primitives {
                     case "success":
                         return outcome;
                     case "failure":
-                        console.log("editD: " + outcome.error.edit)
-                        console.log("eString: " + outcome.error.expectedStr())
+                        //console.log("editD: " + outcome.error.edit)
+                        //console.log("eString: " + outcome.error.expectedStr())
                         let edits : [number,CharStream] = editParse(parser, istream, outcome.error.edit, outcome.error.expectedStr().length, []);
                         //console.log("error.edit: " + outcome.error.edit)
                         //console.log("edits[0]: " + edits[0])
                         outcome.error.edit = edits[0];
-                        console.log(edits[1].toString())
+                        //console.log(edits[1].toString())
                         //console.log(edits[1].toString())
                         //console.log("f(outcome.error): " + f(outcome.error).edit)
                         return new Failure(edits[1], istream.startpos, f(outcome.error));
@@ -147,7 +147,7 @@ export namespace Primitives {
         return (istream: CharStream) => {
             if (istream.isEmpty()) {
                 //edit distance is 1 because you are missing something
-                return new Failure(istream, istream.startpos, new ItemError(1));
+                return new Failure(istream, istream.startpos, new ItemError(0));
             } else {
                 let remaining = istream.tail(); // remaining string;
                 let res = istream.head(); // result of parse;
@@ -223,7 +223,7 @@ export namespace Primitives {
             return (char_class.indexOf(x.toString()) > -1)
                 //the edit distance is 2 because you must delete and then insert to satisfy predicate
                 ? result(x)
-                : (istream: CharStream) => new Failure(istream, istream.startpos - 1, new SatError(char_class, 2));
+                : (istream: CharStream) => new Failure(istream, istream.startpos - 1, new SatError(char_class, 0));
         };
         return bind<CharStream, CharStream>(_item())(f);
     }
