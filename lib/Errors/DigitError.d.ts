@@ -1,9 +1,13 @@
 import { ErrorType } from "./ErrorType";
 import { Option } from "space-lift";
 import { edit } from "../Edit/MetricLcs";
+import { CharUtil } from "../charstream";
+import CharStream = CharUtil.CharStream;
 export declare class DigitError implements ErrorType {
     _editDistance: number;
-    constructor(editDistance: number);
+    _modifiedString: CharStream;
+    constructor(editDistance: number, modifiedString: CharStream);
+    modString: CharStream;
     edit: number;
     rootCause(): Option<ErrorType>;
     explanation(): string;
