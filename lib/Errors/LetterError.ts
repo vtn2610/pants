@@ -4,9 +4,11 @@ import { metriclcs, edit } from "../Edit/MetricLcs";
 
 export class LetterError implements ErrorType {
     public _editDistance : number;
+    private _rootCause : ErrorType | undefined;
     
-    constructor(editDistance : number) {
+    constructor(editDistance : number, rootCause? : ErrorType) {
         this._editDistance = editDistance;
+        this._rootCause = rootCause;
     }
 
     get edit(): number {
@@ -18,7 +20,11 @@ export class LetterError implements ErrorType {
     }
     
     rootCause() : Option<ErrorType> {
-        return None;
+        if (this._rootCause == undefined) {
+            return None;
+        } else {
+            return Some(this._rootCause);
+        }
     }
 
     explanation() {

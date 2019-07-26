@@ -5,10 +5,12 @@ import { metriclcs, edit } from "../Edit/MetricLcs";
 export class CharError implements ErrorType {
     private _expectedChar : string;
     public _editDistance : number;
+    private _rootCause : ErrorType | undefined;
 
-    constructor(expectedChar : string, editDistance : number) {
+    constructor(expectedChar : string, editDistance : number, rootCause? : ErrorType) {
         this._expectedChar = expectedChar;
         this._editDistance = editDistance;
+        this._rootCause = rootCause;
     }
 
     get edit(): number {
@@ -20,7 +22,11 @@ export class CharError implements ErrorType {
     }
 
     rootCause() : Option<ErrorType> {
-        return None;
+        if (this._rootCause == undefined) {
+            return None;
+        } else {
+            return Some(this._rootCause);
+        }
     }
 
     explanation() {
