@@ -8,11 +8,13 @@ export class StringError implements ErrorType {
     public _expectedStr : string;
     public _editDistance : number;
     public _modifiedString: CharStream;
+    private _rootCause : ErrorType | undefined;
 
-    constructor(expectedStr : string, editDistance : number, modifiedString: CharStream) {
+    constructor(expectedStr : string, editDistance : number, modifiedString: CharStream, rootCause? : ErrorType) {
         this._expectedStr = expectedStr;
         this._editDistance = editDistance;
         this._modifiedString = modifiedString;
+        this._rootCause = rootCause;
     }
 
     get modString(){return this._modifiedString;}
@@ -28,7 +30,11 @@ export class StringError implements ErrorType {
     }
 
     rootCause() : Option<ErrorType> {
-        return None;
+        if (this._rootCause == undefined) {
+            return None;
+        } else {
+            return Some(this._rootCause);
+        }
     }
 
     explanation() : string {

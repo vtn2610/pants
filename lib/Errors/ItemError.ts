@@ -34,7 +34,7 @@ export class ItemError implements ErrorType {
     }
 
     expectedStr() : string {
-        return "0" ;
+        return "a" ;
     }
 
     toString() : string {

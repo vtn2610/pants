@@ -7,10 +7,12 @@ import CharStream = CharUtil.CharStream;
 export class WSError implements ErrorType {
     public _editDistance : number;
     public _modifiedString: CharStream;
-
-    constructor(editDistance : number, modifiedString: CharStream) {
+    private _rootCause : ErrorType | undefined;
+    
+    constructor(editDistance : number, modifiedString: CharStream, rootCause? : ErrorType) {
         this._editDistance = editDistance;
         this._modifiedString = modifiedString;
+        this._rootCause = rootCause;
     }
 
     get modString(){return this._modifiedString;}
@@ -26,7 +28,11 @@ export class WSError implements ErrorType {
     }
 
     rootCause() : Option<ErrorType> {
-        return None;
+        if (this._rootCause == undefined) {
+            return None;
+        } else {
+            return Some(this._rootCause);
+        }
     }
 
     explanation() : string {
