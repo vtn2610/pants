@@ -13,6 +13,9 @@ export class ItemError implements ErrorType {
         this._modifiedString = modifiedString;
     }
 
+    set cause(newCause : ErrorType) {
+    }
+
     get modString(){return this._modifiedString;}
     
     set modString(s : CharStream){this._modifiedString = s;}
@@ -25,16 +28,12 @@ export class ItemError implements ErrorType {
         return None;
     }
 
+    expectedStr() : string {
+        return " ";
+    }
+
     explanation() {
         return "";
-    }
-
-    minEdit(input: string, expectedStr: string) : edit[] {
-        return metriclcs(input, expectedStr);
-    }
-
-    expectedStr() : string {
-        return "a" ;
     }
 
     toString() : string {

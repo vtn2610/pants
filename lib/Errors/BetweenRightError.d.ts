@@ -1,6 +1,5 @@
 import { Option } from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { edit } from "../Edit/MetricLcs";
 import { CharUtil } from "../charstream";
 import CharStream = CharUtil.CharStream;
 export declare class BetweenRightError implements ErrorType {
@@ -8,11 +7,11 @@ export declare class BetweenRightError implements ErrorType {
     _editDistance: number;
     _modifiedString: CharStream;
     constructor(rootCause: ErrorType, editDistance: number, modifiedString: CharStream);
+    cause: ErrorType;
     modString: CharStream;
     edit: number;
     rootCause(): Option<ErrorType>;
     explanation(): string;
-    minEdit(input: string, expectedStr?: string): edit[];
     expectedStr(): string;
     toString(): string;
 }

@@ -1,6 +1,5 @@
 import { Option } from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { edit } from "../Edit/MetricLcs";
 import { CharUtil } from "../charstream";
 import CharStream = CharUtil.CharStream;
 export declare class SatError implements ErrorType {
@@ -8,12 +7,12 @@ export declare class SatError implements ErrorType {
     _editDistance: number;
     _modifiedString: CharStream;
     constructor(expectedStr: string[], editDistance: number, modifiedString: CharStream);
+    cause: ErrorType;
     modString: CharStream;
     edit: number;
     rootCause(): Option<ErrorType>;
     readonly errors: string[];
     explanation(): string;
-    minEdit(input: string, expectedStr: string): edit[];
     expectedStr(): string;
     toString(): string;
 }

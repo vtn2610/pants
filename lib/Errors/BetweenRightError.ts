@@ -15,6 +15,10 @@ export class BetweenRightError implements ErrorType {
         this._modifiedString = modifiedString;
     }
     
+    set cause(newCause : ErrorType) {
+        this._rootCause = newCause;
+    }
+
     get modString(){return this._modifiedString;}
     
     set modString(s : CharStream){this._modifiedString = s;}
@@ -28,19 +32,19 @@ export class BetweenRightError implements ErrorType {
     }
 
     rootCause() : Option<ErrorType> {
-        return Some(this._rootCause);
+        if (this._rootCause == undefined) {
+            return None;
+        } else {
+            return Some(this._rootCause);
+        }
     }
 
     explanation() : string {
         return "right part";
     }
 
-    minEdit(input: string, expectedStr: string = "") : edit[] {
-        return this._rootCause.minEdit(input, expectedStr);
-    }
-
     expectedStr() : string {
-        return ")" ;
+        return this._rootCause.expectedStr();
     }
 
     toString() {

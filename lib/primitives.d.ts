@@ -66,6 +66,7 @@ export declare namespace Primitives {
      * @param expecting the error message.
      */
     function zero<T>(expecting: string): IParser<T>;
+    function minEdit(input: string, expectedStr: string): edit[];
     /**
      * expect tries to apply the given parser and returns the result of that parser
      * if it succeeds, otherwise it replaces the current stream with a stream with
@@ -147,7 +148,7 @@ export declare namespace Primitives {
      * @param parsers An array of parsers to try
      */
     function choices<T>(...parsers: IParser<T>[]): IParser<T>;
-    function editParse<T>(p: IParser<T>, istream: CharStream, LCS: number, windowSize: number, edits: edit[]): [number, CharStream];
+    function editParse<T>(p: IParser<T>, istream: CharStream, LCS: number, windowSize: number, orgErrorPos: number, curErrorPos: number, edits: edit[]): [number, CharStream];
     /**
      * appfun allows the user to apply a function f to
      * the result of a parser p, assuming that p is successful.

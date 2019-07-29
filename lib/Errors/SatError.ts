@@ -14,6 +14,8 @@ export class SatError implements ErrorType {
         this._editDistance = editDistance;
         this._modifiedString = modifiedString
     }
+    set cause(newCause : ErrorType) {
+    }
 
     get modString(){return this._modifiedString;}
     
@@ -37,10 +39,6 @@ export class SatError implements ErrorType {
 
     explanation() {
         return "";
-    }
-
-    minEdit(input: string, expectedStr: string) : edit[] {
-        return metriclcs(input,expectedStr);
     }
 
     expectedStr(): string{

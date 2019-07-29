@@ -10,11 +10,14 @@ export class CharError implements ErrorType {
     public _editDistance : number;
     public _modifiedString: CharStream;
 
-    constructor(expectedChar : string, editDistance : number, modifiedString: CharStream, rootCause? : ErrorType) {
+    constructor(expectedChar : string, editDistance : number, modifiedString: CharStream) {
         this._expectedChar = expectedChar;
         this._editDistance = editDistance;
         this._modifiedString = modifiedString;
-        this._rootCause = rootCause;
+    }
+
+    set cause(newCause : ErrorType) {
+        this._rootCause = newCause;
     }
 
     get modString(){return this._modifiedString;}
@@ -39,10 +42,6 @@ export class CharError implements ErrorType {
 
     explanation() {
         return "character " + " ' " + this._expectedChar + " ' "; 
-    }
-
-    minEdit(input: string, expectedStr: string) : edit[] {
-        return metriclcs(input, expectedStr);
     }
 
     expectedStr() : string {

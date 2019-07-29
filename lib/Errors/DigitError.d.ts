@@ -6,7 +6,9 @@ import CharStream = CharUtil.CharStream;
 export declare class DigitError implements ErrorType {
     _editDistance: number;
     _modifiedString: CharStream;
-    constructor(editDistance: number, modifiedString: CharStream);
+    private _rootCause;
+    constructor(editDistance: number, modifiedString: CharStream, rootCause?: ErrorType);
+    cause: ErrorType;
     modString: CharStream;
     edit: number;
     rootCause(): Option<ErrorType>;

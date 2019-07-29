@@ -15,6 +15,10 @@ export class LetterError implements ErrorType {
         this._rootCause = rootCause;
     }
 
+    set cause(newCause : ErrorType) {
+        this._rootCause = newCause;
+    }
+
     get modString(){return this._modifiedString;}
     
     set modString(s : CharStream){this._modifiedString = s;}

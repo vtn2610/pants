@@ -15,6 +15,10 @@ export class BetweenLeftError implements ErrorType {
         this._modifiedString = modifiedString;
     }
 
+    set cause(newCause : ErrorType) {
+        this._rootCause = newCause;
+    }
+
     get modString(){return this._modifiedString;}
     
     set modString(s : CharStream){this._modifiedString = s;}
@@ -26,21 +30,21 @@ export class BetweenLeftError implements ErrorType {
     set edit(d: number){
         this._editDistance = d;
     }
-    
+
     rootCause() : Option<ErrorType> {
-        return Some(this._rootCause);
+        if (this._rootCause == undefined) {
+            return None;
+        } else {
+            return Some(this._rootCause);
+        }
+    }
+
+    expectedStr() : string {
+        return this._rootCause.expectedStr();
     }
 
     explanation() : string {
         return "left";
-    }
-
-    minEdit(input: string, expectedStr: string) : edit[] {
-        return this._rootCause.minEdit(input, expectedStr);
-    }
-
-    expectedStr() : string {
-        return "(" ;
     }
 
     toString() {

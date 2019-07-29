@@ -11,7 +11,7 @@ import { StringError } from "./Errors/StringError";
 import { BetweenLeftError } from "./Errors/BetweenLeftError";
 import { BetweenRightError } from "./Errors/BetweenRightError";
 import { None, Some, Option } from "space-lift";
-import { edit } from "./Edit/MetricLcs";
+import { metriclcs, edit } from "./Edit/MetricLcs";
 import { parser } from "marked";
 
 export namespace Primitives {
@@ -104,8 +104,12 @@ export namespace Primitives {
      */
     export function zero<T>(expecting: string): IParser<T> {
         return (istream) => {
-            return new Failure(istream, istream.startpos, new StringError(expecting,0));
+            return new Failure(istream, istream.startpos, new StringError(expecting,0, new CharStream("")));
         }
+    }
+
+    export function minEdit(input : string, expectedStr : string) {
+        return metriclcs(input, expectedStr);
     }
 
     /**
@@ -124,16 +128,24 @@ export namespace Primitives {
                     case "success":
                         return outcome;
                     case "failure":
-                        //console.log("editD: " + outcome.error.edit)
-                        //console.log("eString: " + outcome.error.expectedStr())
-                        let edits : [number,CharStream] = editParse(parser, istream, outcome.error.edit, outcome.error.expectedStr().length, []);
-                        //console.log("error.edit: " + outcome.error.edit)
-                        //console.log("edits[0]: " + edits[0])
-                        outcome.error.edit = edits[0];
-                        //console.log(edits[1].toString())
-                        //console.log(edits[1].toString())
-                        //console.log("f(outcome.error): " + f(outcome.error).edit)
-                        return new Failure(edits[1], istream.startpos, f(outcome.error));
+                        let newError = f(outcome.error);
+                        let windowSize = newError.expectedStr().length;
+                        //let windowSize = outcome.error.expectedStr().length;
+                        let inputBound = istream.input.substring(outcome.error_pos, outcome.error_pos + windowSize);
+                        let editsSet = minEdit(inputBound, newError.expectedStr());
+                        
+                        
+                        let edits : [number,CharStream] = editParse(parser, istream, outcome.error.edit, windowSize, outcome.error_pos, outcome.error_pos, editsSet);
+                        //console.log("new Char");
+                        //console.log(edits[1]);
+                        console.log("edits[0]: " + edits[0])
+                        newError.edit = edits[0];
+                        console.log("error pos" + outcome.error_pos)
+                        let newStream = edits[1].seek(outcome.error_pos);
+                        newError.modString = newStream;
+                        console.log("new STREAM" + newStream);
+                        
+                        return new Failure(newStream, istream.startpos, newError);
                 }
             }
         };
@@ -146,8 +158,7 @@ export namespace Primitives {
     function _item() {
         return (istream: CharStream) => {
             if (istream.isEmpty()) {
-                //edit distance is 1 because you are missing something
-                return new Failure(istream, istream.startpos, new ItemError(0));
+                return new Failure(istream, istream.startpos, new ItemError(0, new CharStream("")));
             } else {
                 let remaining = istream.tail(); // remaining string;
                 let res = istream.head(); // result of parse;
@@ -167,22 +178,64 @@ export namespace Primitives {
      * is returned in the Failure object (i.e., bind backtracks).
      * @param p A parser
      */
+    // export function bind<T, U>(p: IParser<T>) {
+    //     return (f: (t: T) => IParser<U>) => {
+    //         return (istream: CharStream) => {
+    //             let r = p(istream);
+    //             switch (r.tag) {
+    //                 case "success":
+    //                     let o = f(r.result)(r.inputstream);
+    //                     switch (o.tag) {
+    //                         case "success":
+    //                         // case 1: both parsers succeeds
+    //                             break;
+    //                         case "failure": // note: backtracks, returning original istream
+    //                         // case 2: parser 1 succeeds, 2 fails
+    //                             return new Failure(istream, o.error_pos, o.error);
+    //                     }
+    //                     return o;
+    //                 case "failure":
+    //                     //apply parser again with modified inputstream;
+    //                     return new Failure(istream, r.error_pos, r.error);
+    //             }
+    //         }
+    //     }
+    // }
+
     export function bind<T, U>(p: IParser<T>) {
         return (f: (t: T) => IParser<U>) => {
             return (istream: CharStream) => {
-                let r = (p)((istream));
+                let r = p(istream);
                 switch (r.tag) {
                     case "success":
                         let o = f(r.result)(r.inputstream);
                         switch (o.tag) {
                             case "success":
+                            // case 1: both parsers succeeds
                                 break;
                             case "failure": // note: backtracks, returning original istream
-                                return new Failure(istream, o.error_pos, o.error);
+                            // case 2: parser 1 succeeds, 2 fails
+                                return new Failure(o.error.modString, o.error_pos, o.error);
                         }
                         return o;
                     case "failure":
-                        return new Failure(istream, r.error_pos, r.error);
+                        console.log("it's checking failure case");
+                        //apply parser again with modified inputstream;
+                        console.log(r.error.modString);
+                        let r2 = p(r.error.modString);
+                        if (r2 instanceof Success) {
+                            let o2 = f(r2.result)(r2.inputstream);
+                            switch (o2.tag) {
+                                case "success": 
+                                //case 3: parser 1 fails, 2 succeeds
+                                    break;
+                                case "failure": 
+                                // case 4: both parsers fail
+                                    o2.error.cause = r.error;
+                                    return new Failure(o2.error.modString, o2.error_pos, o2.error);
+                            }
+                        }
+                        return new Failure(r.error.modString, r.error_pos, r.error);
                 }
             }
         }
@@ -204,7 +257,9 @@ export namespace Primitives {
         return (q: IParser<U>) => {
             return (f: (e: [T, U]) => V) => {
                 return bind<T, V>(p)((x) => {
+                    console.log("first parser result" + x);
                     return bind<U, V>(q)((y) => {
+                        console.log("second parser result" + y);
                         let tup: [T, U] = [x, y];
                         return result<V>(f(tup));
                     });
@@ -221,9 +276,8 @@ export namespace Primitives {
     function _sat(char_class: string[]): IParser<CharStream> {
         let f = (x: CharStream) => {
             return (char_class.indexOf(x.toString()) > -1)
-                //the edit distance is 2 because you must delete and then insert to satisfy predicate
                 ? result(x)
-                : (istream: CharStream) => new Failure(istream, istream.startpos - 1, new SatError(char_class, 0));
+                : (istream: CharStream) => new Failure(istream, istream.startpos - 1, new SatError(char_class, 0, new CharStream("")));
         };
         return bind<CharStream, CharStream>(_item())(f);
     }
@@ -242,7 +296,7 @@ export namespace Primitives {
         if (c.length != 1) {
             throw new Error("char parser takes a string of length 1 (i.e., a char)");
         }
-        return expect(_sat([c]))((error : ErrorType) => new CharError(c, error.edit));
+        return expect(_sat([c]))((error : ErrorType) => new CharError(c, error.edit, error.modString));
     }
 
     export function lower_chars() {
@@ -259,7 +313,7 @@ export namespace Primitives {
      */
     export function letter(): IParser<CharStream> {
         let parser : IParser<CharStream> = _sat(lower_chars().concat(upper_chars()));
-        return expect(parser)((error : ErrorType) => new LetterError(error.edit));
+        return expect(parser)((error : ErrorType) => new LetterError(error.edit, new CharStream("")));
     }
 
     /**
@@ -269,7 +323,7 @@ export namespace Primitives {
      */
     export function digit(): IParser<CharStream> {
         let parser : IParser<CharStream> = _sat(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
-        return expect(parser)((error : ErrorType) => new DigitError(error.edit));
+        return expect(parser)((error : ErrorType) => new DigitError(error.edit, new CharStream("")));
     }
 
     /**
@@ -356,47 +410,58 @@ export namespace Primitives {
         
     }
     //performs the force parse, and returns ultimately the LCS length
-    export function editParse<T>(p: IParser<T>, istream : CharStream, LCS: number, windowSize : number, edits: edit[]): [number,CharStream] {
-        if (!istream.isEmpty()) {
-            let istream2 = istream;
-            let o = p(istream2);
-                switch (o.tag) {
-                    case "success":
-                        break; //Keep parsing with next parser
-                    case "failure":
-                        let e = <Failure> o;
-                        let str = istream2.toString();
-                        let inputBound = "";
-                        let maxEdit : number = edits.length;
-                        let newEdit : string = "";
-                        if (edits.length == 0){
-                            windowSize = e.error.expectedStr().length;
-                            inputBound = str.substring(e.error_pos, e.error_pos + windowSize);
-                            edits = e.error.minEdit(inputBound, e.error.expectedStr());
-                            return editParse(p, new CharStream(str), LCS, windowSize, edits);
-                        } else {
-                            let curEdit : edit | undefined = edits.shift();
-                            // case of insertion
-                            if (curEdit !== undefined && curEdit.sign === true) { 
-                                newEdit = inputBound.substring(0, curEdit.pos) + curEdit.char + inputBound.substring(curEdit.pos);
-                                for (let item of edits) {
-                                    item.pos++;
-                                }
-                            // case of deletion
-                            } else if (curEdit !== undefined && curEdit.sign === false) {
-                                newEdit = inputBound.substring(0, curEdit.pos) + inputBound.substring(curEdit.pos+1);
-                                for (let item of edits) {
-                                    item.pos--;
-                                }
+    export function editParse<T>(p: IParser<T>, istream : CharStream, LCS: number, windowSize : number, orgErrorPos : number, curErrorPos : number, edits: edit[]): [number,CharStream] {
+        if (curErrorPos - orgErrorPos < windowSize) {
+            let o = p(istream);
+            switch (o.tag) {
+                case "success":
+                    break; //Keep parsing with next parser
+                case "failure":
+                    let e = <Failure> o;
+                    let str = istream.input;
+                    let inputBound = "";
+                    //let maxEdit : number = edits.length;
+                    curErrorPos = e.error_pos;
+                    let newEdit : string = "";
+                    // if (edits.length == 0){
+                    //     windowSize = e.error.expectedStr().length;
+                    //     inputBound = str.substring(e.error_pos, e.error_pos + windowSize);
+                    //edits = e.error.minEdit(inputBound, e.error.expectedStr());
+                    //     return editParse(p, new CharStream(str), LCS, windowSize, orgErrorPos, curErrorPos, edits);
+                    console.log(edits);
+                    if (edits.length !== 0) {
+                        let curEdit : edit | undefined = edits.shift();
+                        // case of insertion
+                        if (curEdit !== undefined && curEdit.sign === true) { 
+                            if (edits[0] !== undefined && edits[0].pos == curEdit.pos && edits[0].sign === false) {
+                                // case of replacement
+                                let replace = edits.shift();
+                                console.log(curEdit.char + " changed letter");
+                                if (replace !== undefined) str = str.substring(0, curErrorPos + curEdit.pos) + curEdit.char + str.substring(curErrorPos + curEdit.pos + 1);
+                                LCS += 2;
+                            } else {
+                            //newEdit = inputBound.substring(0, curEdit.pos) + curEdit.char + inputBound.substring(curEdit.pos);
+                            str = str.substring(0, curErrorPos + curEdit.pos) + curEdit.char + str.substring(curErrorPos + curEdit.pos);
+                            for (let item of edits) {
+                                item.pos++;
                             }
+                            LCS++;
                         }
-                        LCS ++;
-                        //console.log(LCS)
-                        str = str.substring(0, e.error_pos) + newEdit + str.substring(e.error_pos + windowSize);
-                        return editParse(p, new CharStream(str), LCS, newEdit.length, edits);
-                        //calculate LCS, replace istream, and call LCSParse on same parser
+
+                        // case of deletion
+                        } else if (curEdit !== undefined && curEdit.sign === false) {
+                            str = inputBound.substring(0, curErrorPos + curEdit.pos) + inputBound.substring(curErrorPos + curEdit.pos + 1);
+                            for (let item of edits) {
+                                item.pos--;
+                            }
+                            LCS++;
+                        }
+                    }
+                    
+                    return editParse(p, new CharStream(str), LCS, newEdit.length, orgErrorPos, curErrorPos, edits);
+                    //calculate LCS, replace istream, and call LCSParse on same parser
             }
-        }
+        } 
         return [LCS, istream];
     }
         
@@ -481,7 +546,7 @@ export namespace Primitives {
             for (let c of chars) {
                 p = seq<CharStream, CharStream, CharStream>(p)(char(c))(f);
             }
-            return expect(p)((error : ErrorType) => new StringError(s,error.edit))(istream);
+            return expect(p)((error : ErrorType) => new StringError(s,error.edit, new CharStream("")))(istream);
         }
     }
 
@@ -491,7 +556,7 @@ export namespace Primitives {
      */
     export function eof(): IParser<EOFMark> {
         return (istream: CharStream) => {
-            return istream.isEOF() ? new Success(istream, EOF) : new Failure(istream, istream.startpos, new StringError("EOF", istream.length()));
+            return istream.isEOF() ? new Success(istream, EOF) : new Failure(istream, istream.startpos, new StringError("EOF", istream.length(), new CharStream("")));
         }
     }
 
@@ -546,11 +611,15 @@ export namespace Primitives {
         return (pclose: IParser<U>) => {
             return (p: IParser<V>) => {
                 let l: IParser<V> = left<V, U>(p)(expect(pclose)(
-                    (error : ErrorType) => new BetweenRightError(error,error.edit)
+                    (error : ErrorType) => {
+                        console.log(error);
+                        console.log(error.edit);
+                        return new BetweenRightError(error, error.edit, new CharStream(""))
+                    }
                 ));
 
                 let r: IParser<V> = right<T, V>(expect(popen)(
-                    (error : ErrorType) => new BetweenLeftError(error,error.edit)
+                    (error : ErrorType) => new BetweenLeftError(error, error.edit, new CharStream(""))
                 ))(l);
                 return r;
             }
@@ -608,7 +677,7 @@ export namespace Primitives {
      */
     export function ws1(): IParser<CharStream> {
         return (istream: CharStream) => {
-            let o = expect(many1(wschars))((error: ErrorType) => new WSError(error.edit))(istream);
+            let o = expect(many1(wschars))((error: ErrorType) => new WSError(error.edit, new CharStream("")))(istream);
             switch (o.tag) {
                 case "success":
                     return new Success(o.inputstream, CharStream.concat(o.result));
@@ -666,7 +735,7 @@ export namespace Primitives {
                     }
                 }
             }
-            return new Failure(istream, istream.startpos, new StringError(<string>istream.substring(istream.startpos, istream.endpos).input,0));
+            return new Failure(istream, istream.startpos, new StringError(<string>istream.substring(istream.startpos, istream.endpos).input,0, new CharStream("")));
         }
     }
 }
