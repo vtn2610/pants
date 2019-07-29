@@ -130,12 +130,10 @@ export namespace Primitives {
                     case "failure":
                         let newError = f(outcome.error);
                         let windowSize = newError.expectedStr().length;
-                        //let windowSize = outcome.error.expectedStr().length;
                         let inputBound = istream.input.substring(outcome.error_pos, outcome.error_pos + windowSize);
                         let editsSet = minEdit(inputBound, newError.expectedStr());
                         
-                        
-                        let edits : [number,CharStream] = editParse(parser, istream, outcome.error.edit, windowSize, outcome.error_pos, outcome.error_pos, editsSet);
+                        let edits : [number, CharStream] = editParse(parser, istream, outcome.error.edit, windowSize, outcome.error_pos, outcome.error_pos, editsSet);
                         //console.log("new Char");
                         //console.log(edits[1]);
                         console.log("edits[0]: " + edits[0])
@@ -411,59 +409,47 @@ export namespace Primitives {
     }
     //performs the force parse, and returns ultimately the LCS length
     export function editParse<T>(p: IParser<T>, istream : CharStream, LCS: number, windowSize : number, orgErrorPos : number, curErrorPos : number, edits: edit[]): [number,CharStream] {
-        if (curErrorPos - orgErrorPos < windowSize) {
-            let o = p(istream);
-            switch (o.tag) {
-                case "success":
-                    break; //Keep parsing with next parser
-                case "failure":
-                    let e = <Failure> o;
-                    let str = istream.input;
-                    let inputBound = "";
-                    //let maxEdit : number = edits.length;
-                    curErrorPos = e.error_pos;
-                    let newEdit : string = "";
-                    // if (edits.length == 0){
-                    //     windowSize = e.error.expectedStr().length;
-                    //     inputBound = str.substring(e.error_pos, e.error_pos + windowSize);
-                    //edits = e.error.minEdit(inputBound, e.error.expectedStr());
-                    //     return editParse(p, new CharStream(str), LCS, windowSize, orgErrorPos, curErrorPos, edits);
-                    console.log(edits);
-                    if (edits.length !== 0) {
-                        let curEdit : edit | undefined = edits.shift();
-                        // case of insertion
-                        if (curEdit !== undefined && curEdit.sign === true) { 
-                            if (edits[0] !== undefined && edits[0].pos == curEdit.pos && edits[0].sign === false) {
-                                // case of replacement
-                                let replace = edits.shift();
-                                console.log(curEdit.char + " changed letter");
-                                if (replace !== undefined) str = str.substring(0, curErrorPos + curEdit.pos) + curEdit.char + str.substring(curErrorPos + curEdit.pos + 1);
+        let o = p(istream);
+        let string = istream.input;
+        switch (o.tag) {
+            case "success":
+                break; //Keep parsing with next parser
+            case "failure":
+                let e = <Failure> o;
+                curErrorPos = e.error_pos;
+                //let maxEdit : number = edits.length;
+                while (edits.length > 0) {
+                    let curEdit : edit | undefined = edits.shift();
+                    // case of insertion
+                    if (curEdit !== undefined && curEdit.sign === true) { 
+                        if (edits[0] !== undefined && edits[0].pos == curEdit.pos && edits[0].sign === false) {
+                            // case of replacement
+                            let replace = edits.shift();
+                            if (replace !== undefined) string = string.substring(0, curErrorPos + curEdit.pos) + curEdit.char + string.substring(curErrorPos + curEdit.pos + 1);
                                 LCS += 2;
-                            } else {
-                            //newEdit = inputBound.substring(0, curEdit.pos) + curEdit.char + inputBound.substring(curEdit.pos);
-                            str = str.substring(0, curErrorPos + curEdit.pos) + curEdit.char + str.substring(curErrorPos + curEdit.pos);
+                        } else {
+                            string = string.substring(0, curErrorPos + curEdit.pos) + curEdit.char + string.substring(curErrorPos + curEdit.pos);
                             for (let item of edits) {
                                 item.pos++;
                             }
                             LCS++;
+                            windowSize++;
                         }
-
-                        // case of deletion
-                        } else if (curEdit !== undefined && curEdit.sign === false) {
-                            str = inputBound.substring(0, curErrorPos + curEdit.pos) + inputBound.substring(curErrorPos + curEdit.pos + 1);
-                            for (let item of edits) {
-                                item.pos--;
-                            }
-                            LCS++;
+                    // case of deletion
+                    } else if (curEdit !== undefined && curEdit.sign === false) {
+                        string = string.substring(0, curErrorPos + curEdit.pos) + string.substring(curErrorPos + curEdit.pos + 1);
+                        for (let item of edits) {
+                            item.pos--;
                         }
+                        LCS++;
+                        windowSize--;
                     }
-                    
-                    return editParse(p, new CharStream(str), LCS, newEdit.length, orgErrorPos, curErrorPos, edits);
-                    //calculate LCS, replace istream, and call LCSParse on same parser
+                    if (p(new CharStream(string)).tag == "success") {break}
+                }        
             }
-        } 
-        return [LCS, istream];
-    }
+        return [LCS, new CharStream(string)];
+    } 
+        
         
     /**
      * appfun allows the user to apply a function f to
