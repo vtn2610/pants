@@ -75,6 +75,7 @@ export declare namespace Primitives {
      * @param parser The parser to try
      * @param f A function that produces a new Errors given an existing Errors
      */
+    let count: number;
     function expect<T>(parser: IParser<T>): (f: EComposer) => IParser<T>;
     function item(): IParser<CharUtil.CharStream>;
     /**
@@ -84,6 +85,7 @@ export declare namespace Primitives {
      * is returned in the Failure object (i.e., bind backtracks).
      * @param p A parser
      */
+    let bindcount: number;
     function bind<T, U>(p: IParser<T>): (f: (t: T) => IParser<U>) => (istream: CharUtil.CharStream) => Outcome<U>;
     function delay<T>(p: IParser<T>): () => IParser<T>;
     /**
@@ -148,6 +150,8 @@ export declare namespace Primitives {
      * @param parsers An array of parsers to try
      */
     function choices<T>(...parsers: IParser<T>[]): IParser<T>;
+    function editParse2<T>(p: IParser<T>, istream: CharStream, LCS: number, windowSize: number, orgErrorPos: number, curErrorPos: number, edits: edit[]): [number, CharStream];
+    let editParsecount: number;
     function editParse<T>(p: IParser<T>, istream: CharStream, LCS: number, windowSize: number, orgErrorPos: number, curErrorPos: number, edits: edit[]): [number, CharStream];
     /**
      * appfun allows the user to apply a function f to

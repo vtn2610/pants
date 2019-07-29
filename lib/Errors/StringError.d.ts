@@ -10,6 +10,7 @@ export declare class StringError implements ErrorType {
     private _rootCause;
     constructor(expectedStr: string, editDistance: number, modifiedString: CharStream, rootCause?: ErrorType);
     cause: ErrorType;
+    getTotalEdit(): number;
     modString: CharStream;
     edit: number;
     rootCause(): Option<ErrorType>;

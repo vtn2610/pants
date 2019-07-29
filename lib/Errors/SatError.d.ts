@@ -10,6 +10,7 @@ export declare class SatError implements ErrorType {
     cause: ErrorType;
     modString: CharStream;
     edit: number;
+    getTotalEdit(): number;
     rootCause(): Option<ErrorType>;
     readonly errors: string[];
     explanation(): string;

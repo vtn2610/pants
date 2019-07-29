@@ -9,6 +9,7 @@ export declare class CharError implements ErrorType {
     _modifiedString: CharStream;
     constructor(expectedChar: string, editDistance: number, modifiedString: CharStream);
     cause: ErrorType;
+    getTotalEdit(): number;
     modString: CharStream;
     edit: number;
     rootCause(): Option<ErrorType>;

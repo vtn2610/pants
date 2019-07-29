@@ -14,6 +14,15 @@ export class BetweenRightError implements ErrorType {
         this._editDistance = editDistance;
         this._modifiedString = modifiedString;
     }
+
+    getTotalEdit() : number {
+        let total = this.edit;
+        let rootCause = this.rootCause();
+        if (rootCause.isDefined()) {
+            total += rootCause.get().getTotalEdit()
+        }
+        return total;
+    }
     
     set cause(newCause : ErrorType) {
         this._rootCause = newCause;

@@ -3,6 +3,7 @@ import { ErrorType } from "./ErrorType";
 import { edit } from "../Edit/MetricLcs";
 import { CharUtil } from "../charstream"
 import CharStream = CharUtil.CharStream;
+import { totalmem } from 'os';
 
 export class BetweenLeftError implements ErrorType {
     private _rootCause : ErrorType;
@@ -13,6 +14,15 @@ export class BetweenLeftError implements ErrorType {
         this._rootCause = rootCause;
         this._editDistance = editDistance;
         this._modifiedString = modifiedString;
+    }
+
+    getTotalEdit() : number {
+        let total = this.edit;
+        let rootCause = this.rootCause();
+        if (rootCause.isDefined()) {
+            total += rootCause.get().getTotalEdit()
+        }
+        return total;
     }
 
     set cause(newCause : ErrorType) {

@@ -8,6 +8,7 @@ export declare class WSError implements ErrorType {
     private _rootCause;
     constructor(editDistance: number, modifiedString: CharStream, rootCause?: ErrorType);
     cause: ErrorType;
+    getTotalEdit(): number;
     modString: CharStream;
     edit: number;
     rootCause(): Option<ErrorType>;

@@ -9,6 +9,7 @@ export declare class LetterError implements ErrorType {
     private _rootCause;
     constructor(editDistance: number, modifiedString: CharStream, rootCause?: ErrorType);
     cause: ErrorType;
+    getTotalEdit(): number;
     modString: CharStream;
     edit: number;
     rootCause(): Option<ErrorType>;

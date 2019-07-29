@@ -7,6 +7,7 @@ export declare class BetweenRightError implements ErrorType {
     _editDistance: number;
     _modifiedString: CharStream;
     constructor(rootCause: ErrorType, editDistance: number, modifiedString: CharStream);
+    getTotalEdit(): number;
     cause: ErrorType;
     modString: CharStream;
     edit: number;

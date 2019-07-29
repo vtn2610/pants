@@ -16,6 +16,15 @@ export class ItemError implements ErrorType {
     set cause(newCause : ErrorType) {
     }
 
+    getTotalEdit() : number {
+        let total = this.edit;
+        let rootCause = this.rootCause();
+        if (rootCause.isDefined()) {
+            total += rootCause.get().getTotalEdit()
+        }
+        return total;
+    }
+
     get modString(){return this._modifiedString;}
     
     set modString(s : CharStream){this._modifiedString = s;}

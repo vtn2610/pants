@@ -7,6 +7,7 @@ export declare class ItemError implements ErrorType {
     _modifiedString: CharStream;
     constructor(editDistance: number, modifiedString: CharStream);
     cause: ErrorType;
+    getTotalEdit(): number;
     modString: CharStream;
     edit: number;
     rootCause(): Option<ErrorType>;

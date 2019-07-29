@@ -25,6 +25,15 @@ export class SatError implements ErrorType {
         return this._editDistance;
     }
 
+    getTotalEdit() : number {
+        let total = this.edit;
+        let rootCause = this.rootCause();
+        if (rootCause.isDefined()) {
+            total += rootCause.get().getTotalEdit()
+        }
+        return total;
+    }
+
     set edit(d: number){
         this._editDistance = d;
     }
