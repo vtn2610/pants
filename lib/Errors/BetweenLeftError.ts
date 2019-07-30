@@ -6,27 +6,27 @@ import CharStream = CharUtil.CharStream;
 import { totalmem } from 'os';
 
 export class BetweenLeftError implements ErrorType {
-    private _rootCause : ErrorType;
+    private _rootCauses : ErrorType[];
     public _editDistance : number;
     public _modifiedString: CharStream;   
 
-    constructor(rootCause : ErrorType, editDistance : number, modifiedString : CharStream) {
-        this._rootCause = rootCause;
+    constructor(rootCauses : ErrorType[], editDistance : number, modifiedString : CharStream) {
+        this._rootCauses = rootCauses;
         this._editDistance = editDistance;
         this._modifiedString = modifiedString;
     }
 
-    getTotalEdit() : number {
-        let total = this.edit;
-        let rootCause = this.rootCause();
-        if (rootCause.isDefined()) {
-            total += rootCause.get().getTotalEdit()
-        }
-        return total;
-    }
+    // getTotalEdit() : number {
+    //     let total = this.edit;
+    //     let rootCause = this.rootCause();
+    //     if (rootCause.isDefined()) {
+    //         total += rootCause.get().getTotalEdit()
+    //     }
+    //     return total;
+    // }
 
-    set cause(newCause : ErrorType) {
-        this._rootCause = newCause;
+    set causes(newCause : ErrorType[]) {
+        this._rootCauses = newCause;
     }
 
     get modString(){return this._modifiedString;}
@@ -41,16 +41,16 @@ export class BetweenLeftError implements ErrorType {
         this._editDistance = d;
     }
 
-    rootCause() : Option<ErrorType> {
-        if (this._rootCause == undefined) {
+    rootCauses() : Option<ErrorType[]> {
+        if (this._rootCauses == undefined) {
             return None;
         } else {
-            return Some(this._rootCause);
+            return Some(this._rootCauses);
         }
     }
 
     expectedStr() : string {
-        return this._rootCause.expectedStr();
+        return "(";
     }
 
     explanation() : string {
@@ -58,6 +58,6 @@ export class BetweenLeftError implements ErrorType {
     }
 
     toString() {
-        return "BetweenLeftError -> " + this._rootCause;
+        return "BetweenLeftError -> " + this._rootCauses;
     }
 }

@@ -8,3 +8,4 @@ export { WSError } from "./WSError";
 export { StringError } from "./StringError";
 export { BetweenLeftError } from "./BetweenLeftError";
 export { BetweenRightError } from "./BetweenRightError";
+export { BindError } from "./BindError";

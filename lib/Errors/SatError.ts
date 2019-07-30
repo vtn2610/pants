@@ -14,7 +14,7 @@ export class SatError implements ErrorType {
         this._editDistance = editDistance;
         this._modifiedString = modifiedString
     }
-    set cause(newCause : ErrorType) {
+    set causes(newCause : ErrorType[]) {
     }
 
     get modString(){return this._modifiedString;}
@@ -25,20 +25,20 @@ export class SatError implements ErrorType {
         return this._editDistance;
     }
 
-    getTotalEdit() : number {
-        let total = this.edit;
-        let rootCause = this.rootCause();
-        if (rootCause.isDefined()) {
-            total += rootCause.get().getTotalEdit()
-        }
-        return total;
-    }
+    // getTotalEdit() : number {
+    //     let total = this.edit;
+    //     let rootCause = this.rootCause();
+    //     if (rootCause.isDefined()) {
+    //         total += rootCause.get().getTotalEdit()
+    //     }
+    //     return total;
+    // }
 
     set edit(d: number){
         this._editDistance = d;
     }
 
-    rootCause() : Option<ErrorType> {
+    rootCauses() : Option<ErrorType[]> {
         return None;
     }
 

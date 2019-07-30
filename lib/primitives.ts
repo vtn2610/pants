@@ -10,6 +10,8 @@ import { WSError } from "./Errors/WSError";
 import { StringError } from "./Errors/StringError";
 import { BetweenLeftError } from "./Errors/BetweenLeftError";
 import { BetweenRightError } from "./Errors/BetweenRightError";
+import { BindError } from "./Errors/BindError";
+import { SeqError } from "./Errors/SeqError";
 import { None, Some, Option } from "space-lift";
 import { metriclcs, edit } from "./Edit/MetricLcs";
 import { parser } from "marked";
@@ -154,23 +156,24 @@ export namespace Primitives {
         };
     }
 
+
     /**
      * item successfully consumes the first character if the input
      * string is non-empty, otherwise it fails.
      */
-    function _item() {
-        return (istream: CharStream) => {
-            if (istream.isEmpty()) {
-                return new Failure(istream, istream.startpos, new ItemError(0, new CharStream("")));
-            } else {
-                let remaining = istream.tail(); // remaining string;
-                let res = istream.head(); // result of parse;
-                return new Success(remaining, res);
+    export function item() {
+        function _item() {
+            return (istream: CharStream) => {
+                if (istream.isEmpty()) {
+                    return new Failure(istream, istream.startpos, new ItemError(0, new CharStream("")));
+                } else {
+                    let remaining = istream.tail(); // remaining string;
+                    let res = istream.head(); // result of parse;
+                    return new Success(remaining, res);
+                }
             }
         }
-    }
 
-    export function item() {
         return expect(_item())((error : ErrorType) => error);
     }
 
@@ -181,74 +184,32 @@ export namespace Primitives {
      * is returned in the Failure object (i.e., bind backtracks).
      * @param p A parser
      */
-    // export function bind<T, U>(p: IParser<T>) {
-    //     return (f: (t: T) => IParser<U>) => {
-    //         return (istream: CharStream) => {
-    //             let r = p(istream);
-    //             switch (r.tag) {
-    //                 case "success":
-    //                     let o = f(r.result)(r.inputstream);
-    //                     switch (o.tag) {
-    //                         case "success":
-    //                         // case 1: both parsers succeeds
-    //                             break;
-    //                         case "failure": // note: backtracks, returning original istream
-    //                         // case 2: parser 1 succeeds, 2 fails
-    //                             return new Failure(istream, o.error_pos, o.error);
-    //                     }
-    //                     return o;
-    //                 case "failure":
-    //                     //apply parser again with modified inputstream;
-    //                     return new Failure(istream, r.error_pos, r.error);
-    //             }
-    //         }
-    //     }
-    // }
-
-    export let bindcount = 0;
     export function bind<T, U>(p: IParser<T>) {
-        bindcount ++;
         return (f: (t: T) => IParser<U>) => {
-            return (istream: CharStream) => {
-                let r = p(istream);
-                switch (r.tag) {
-                    case "success":
-                        let o = f(r.result)(r.inputstream);
-                        switch (o.tag) {
+            function _bind<T, U>(p: IParser<T>) {
+                return (f: (t: T) => IParser<U>) => {
+                    return (istream: CharStream) => {
+                        let r = p(istream);
+                        switch (r.tag) {
                             case "success":
-                            // case 1: both parsers succeeds
-                                break;
-                            case "failure": // note: backtracks, returning original istream
-                            // case 2: parser 1 succeeds, 2 fails
-                                return new Failure(o.error.modString, o.error_pos, o.error);
+                                let o = f(r.result)(r.inputstream);
+                                switch (o.tag) {
+                                    case "success":
+                                    // case 1: both parsers succeeds
+                                        break;
+                                    case "failure": // note: backtracks, returning original istream
+                                    // case 2: parser 1 succeeds, 2 fails
+                                        return new Failure(istream, o.error_pos, o.error);
+                                }
+                                return o;
+                            case "failure":
+                                //apply parser again with modified inputstream;
+                                return new Failure(istream, r.error_pos, r.error);
                         }
-                        console.log("success");
-                        console.log(o);
-                        return o;
-                    case "failure":
-                        //console.log("it's checking failure case");
-                        //apply parser again with modified inputstream;
-                        // console.log("start POSSSS " + r.error.modString.startpos);
-                        // console.log(r.error_pos);
-                        console.log(r.error.modString);
-                        let r2 = p(r.error.modString.seek(r.error_pos));
-                        console.log("forced parse result:");
-                        console.log(r2);
-                        if (r2 instanceof Success) {
-                            let o2 = f(r2.result)(r2.inputstream);
-                            switch (o2.tag) {
-                                case "success": 
-                                //case 3: parser 1 fails, 2 succeeds
-                                    break;
-                                case "failure":
-                                // case 4: both parsers fails
-                                    o2.error.cause = r.error;
-                                    return new Failure(o2.error.modString, o2.error_pos, o2.error);
-                            }
-                        }
-                    return new Failure(r.error.modString, r.error_pos, r.error);
+                    }
                 }
             }
+            return expect(_bind<T,U>(p)(f))(e => new BindError(e.edit,e.modString))
         }
     }
 
@@ -268,7 +229,11 @@ export namespace Primitives {
         return (q: IParser<U>) => {
             return (f: (e: [T, U]) => V) => {
                 return bind<T, V>(p)((x) => {
+                    
+
                     return bind<U, V>(q)((y) => {
+
+
                         let tup: [T, U] = [x, y];
                         return result<V>(f(tup));
                     });
@@ -288,7 +253,7 @@ export namespace Primitives {
                 ? result(x)
                 : (istream: CharStream) => new Failure(istream, istream.startpos - 1, new SatError(char_class, 0, new CharStream("")));
         };
-        return bind<CharStream, CharStream>(_item())(f);
+        return bind<CharStream, CharStream>(item())(f);
     }
 
     export function sat(char_class: string[]): IParser<CharStream>{
@@ -600,7 +565,7 @@ export namespace Primitives {
                     break;
                 case "failure":
                     console.log(o);
-                    return new Failure(o.error.modString, o.error_pos, new StringError(s, o.error.getTotalEdit(), o.error.modString));
+                    return new Failure(o.error.modString, o.error_pos, new StringError(s, o.error.edit, o.error.modString));
             }
             return o;
         }
@@ -670,12 +635,12 @@ export namespace Primitives {
                     (error : ErrorType) => {
                         console.log(error);
                         console.log(error.edit);
-                        return new BetweenRightError(error, error.edit, new CharStream(""))
+                        return new BetweenRightError([error], error.edit, new CharStream(""))
                     }
                 ));
 
                 let r: IParser<V> = right<T, V>(expect(popen)(
-                    (error : ErrorType) => new BetweenLeftError(error, error.edit, new CharStream(""))
+                    (error : ErrorType) => new BetweenLeftError([error], error.edit, new CharStream(""))
                 ))(l);
                 return r;
             }

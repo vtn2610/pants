@@ -77,6 +77,10 @@ export declare namespace Primitives {
      */
     let count: number;
     function expect<T>(parser: IParser<T>): (f: EComposer) => IParser<T>;
+    /**
+     * item successfully consumes the first character if the input
+     * string is non-empty, otherwise it fails.
+     */
     function item(): IParser<CharUtil.CharStream>;
     /**
      * bind is a curried function that takes a parser p and returns
@@ -85,8 +89,7 @@ export declare namespace Primitives {
      * is returned in the Failure object (i.e., bind backtracks).
      * @param p A parser
      */
-    let bindcount: number;
-    function bind<T, U>(p: IParser<T>): (f: (t: T) => IParser<U>) => (istream: CharUtil.CharStream) => Outcome<U>;
+    function bind<T, U>(p: IParser<T>): (f: (t: T) => IParser<U>) => IParser<U>;
     function delay<T>(p: IParser<T>): () => IParser<T>;
     /**
      * seq is a curried function that takes a parser p, a parser q,
@@ -96,7 +99,7 @@ export declare namespace Primitives {
      * a single result.
      * @param p A parser
      */
-    function seq<T, U, V>(p: IParser<T>): (q: IParser<U>) => (f: (e: [T, U]) => V) => (istream: CharUtil.CharStream) => Outcome<V>;
+    function seq<T, U, V>(p: IParser<T>): (q: IParser<U>) => (f: (e: [T, U]) => V) => IParser<V>;
     function sat(char_class: string[]): IParser<CharStream>;
     /**
      * char takes a character and yields a parser that consume

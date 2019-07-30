@@ -1,19 +1,18 @@
-import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
+import { Option, Some, None } from "space-lift";
 import { metriclcs, edit } from "../Edit/MetricLcs";
 import { CharUtil } from "../charstream"
 import CharStream = CharUtil.CharStream;
 
-export class CharError implements ErrorType {
-    private _expectedChar : string;
-    private _rootCauses : ErrorType[] | undefined;
+export class SeqError implements ErrorType {
     public _editDistance : number;
     public _modifiedString: CharStream;
-
-    constructor(expectedChar : string, editDistance : number, modifiedString: CharStream) {
-        this._expectedChar = expectedChar;
+    private _rootCauses : ErrorType[] | undefined;
+    
+    constructor(editDistance : number, modifiedString: CharStream, rootCauses? : ErrorType[]) {
         this._editDistance = editDistance;
         this._modifiedString = modifiedString;
+        this._rootCauses = rootCauses;
     }
 
     set causes(newCause : ErrorType[]) {
@@ -22,7 +21,7 @@ export class CharError implements ErrorType {
 
     // getTotalEdit() : number {
     //     let total = this.edit;
-    //     let rootCause = this.rootCause();
+    //     let rootCause = this.rootCauses();
     //     if (rootCause.isDefined()) {
     //         total += rootCause.get().getTotalEdit()
     //     }
@@ -49,15 +48,15 @@ export class CharError implements ErrorType {
         }
     }
 
-    explanation() {
-        return "character " + " ' " + this._expectedChar + " ' "; 
+    explanation() : string {
+        return "";
     }
 
     expectedStr() : string {
-        return this._expectedChar;
+        return "" ;
     }
 
     toString() : string {
-        return "CharError -> " + " ' " + this._expectedChar + " ' "; 
+        return "SeqError"; 
     }
 }

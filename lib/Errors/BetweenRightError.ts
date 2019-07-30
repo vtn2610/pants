@@ -5,27 +5,27 @@ import { CharUtil } from "../charstream";
 import CharStream = CharUtil.CharStream;
 
 export class BetweenRightError implements ErrorType {
-    private _rootCause : ErrorType;
+    private _rootCauses : ErrorType[];
     public _editDistance : number;
     public _modifiedString: CharStream;
     
-    constructor(rootCause : ErrorType, editDistance : number,  modifiedString: CharStream) {
-        this._rootCause = rootCause;
+    constructor(rootCauses : ErrorType[], editDistance : number,  modifiedString: CharStream) {
+        this._rootCauses = rootCauses;
         this._editDistance = editDistance;
         this._modifiedString = modifiedString;
     }
 
-    getTotalEdit() : number {
-        let total = this.edit;
-        let rootCause = this.rootCause();
-        if (rootCause.isDefined()) {
-            total += rootCause.get().getTotalEdit()
-        }
-        return total;
-    }
+    // getTotalEdit() : number {
+    //     let total = this.edit;
+    //     let rootCause = this.rootCause();
+    //     if (rootCause.isDefined()) {
+    //         total += rootCause.get().getTotalEdit()
+    //     }
+    //     return total;
+    // }
     
-    set cause(newCause : ErrorType) {
-        this._rootCause = newCause;
+    set causes(newCause : ErrorType[]) {
+        this._rootCauses = newCause;
     }
 
     get modString(){return this._modifiedString;}
@@ -40,11 +40,11 @@ export class BetweenRightError implements ErrorType {
         this._editDistance = d;
     }
 
-    rootCause() : Option<ErrorType> {
-        if (this._rootCause == undefined) {
+    rootCauses() : Option<ErrorType[]> {
+        if (this._rootCauses == undefined) {
             return None;
         } else {
-            return Some(this._rootCause);
+            return Some(this._rootCauses);
         }
     }
 
@@ -53,10 +53,10 @@ export class BetweenRightError implements ErrorType {
     }
 
     expectedStr() : string {
-        return this._rootCause.expectedStr();
+        return ")";
     }
 
     toString() {
-        return "BetweenRightError -> " + this._rootCause; 
+        return "BetweenRightError -> " + this._rootCauses; 
     }
 }

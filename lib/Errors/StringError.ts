@@ -8,27 +8,27 @@ export class StringError implements ErrorType {
     public _expectedStr : string;
     public _editDistance : number;
     public _modifiedString: CharStream;
-    private _rootCause : ErrorType | undefined;
+    private _rootCauses : ErrorType[] | undefined;
 
-    constructor(expectedStr : string, editDistance : number, modifiedString: CharStream, rootCause? : ErrorType) {
+    constructor(expectedStr : string, editDistance : number, modifiedString: CharStream, rootCauses? : ErrorType[]) {
         this._expectedStr = expectedStr;
         this._editDistance = editDistance;
         this._modifiedString = modifiedString;
-        this._rootCause = rootCause;
+        this._rootCauses = rootCauses;
     }
 
-    set cause(newCause : ErrorType) {
-        this._rootCause = newCause;
+    set causes(newCause : ErrorType[]) {
+        this._rootCauses = newCause;
     }
 
-    getTotalEdit() : number {
-        let total = this.edit;
-        let rootCause = this.rootCause();
-        if (rootCause.isDefined()) {
-            total += rootCause.get().getTotalEdit()
-        }
-        return total;
-    }
+    // getTotalEdit() : number {
+    //     let total = this.edit;
+    //     let rootCause = this.rootCause();
+    //     if (rootCause.isDefined()) {
+    //         total += rootCause.get().getTotalEdit()
+    //     }
+    //     return total;
+    // }
 
     get modString(){return this._modifiedString;}
     
@@ -42,11 +42,11 @@ export class StringError implements ErrorType {
         this._editDistance = d;
     }
 
-    rootCause() : Option<ErrorType> {
-        if (this._rootCause == undefined) {
+    rootCauses() : Option<ErrorType[]> {
+        if (this._rootCauses == undefined) {
             return None;
         } else {
-            return Some(this._rootCause);
+            return Some(this._rootCauses);
         }
     }
 

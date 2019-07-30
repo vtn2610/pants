@@ -13,17 +13,17 @@ export class ItemError implements ErrorType {
         this._modifiedString = modifiedString;
     }
 
-    set cause(newCause : ErrorType) {
+    set causes(newCause : ErrorType[]) {
     }
 
-    getTotalEdit() : number {
-        let total = this.edit;
-        let rootCause = this.rootCause();
-        if (rootCause.isDefined()) {
-            total += rootCause.get().getTotalEdit()
-        }
-        return total;
-    }
+    // getTotalEdit() : number {
+    //     let total = this.edit;
+    //     let rootCause = this.rootCause();
+    //     if (rootCause.isDefined()) {
+    //         total += rootCause.get().getTotalEdit()
+    //     }
+    //     return total;
+    // }
 
     get modString(){return this._modifiedString;}
     
@@ -33,7 +33,7 @@ export class ItemError implements ErrorType {
 
     set edit(d : number){this._editDistance = d;}
 
-    rootCause() : Option<ErrorType> {
+    rootCauses() : Option<ErrorType[]> {
         return None;
     }
 

@@ -6,9 +6,9 @@ import { CharUtil } from "../charstream"
 import CharStream = CharUtil.CharStream;
 
 export interface ErrorType {
-    getTotalEdit() : number
-    cause : ErrorType;
-    rootCause() : Option<ErrorType>
+    //getTotalEdit() : number
+    causes : ErrorType[];
+    rootCauses() : Option<ErrorType[]>
     explanation() : string
     expectedStr(): string
     edit : number 
