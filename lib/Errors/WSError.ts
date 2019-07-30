@@ -1,59 +1,23 @@
+import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { Option, Some, None } from "space-lift";
-import { metriclcs, edit } from "../Edit/MetricLcs";
+import { edit } from "../Edit/MetricLcs";
 import { CharUtil } from "../charstream"
 import CharStream = CharUtil.CharStream;
+import { totalmem } from 'os';
+import { AbstractError } from './AbstractError';
+import { Primitives } from '../primitives';
+import Success = Primitives.Success;
 
-export class WSError implements ErrorType {
-    public _editDistance : number;
-    public _modifiedString: CharStream;
-    private _rootCauses : ErrorType[] | undefined;
-    
-    constructor(editDistance : number, modifiedString: CharStream, rootCauses? : ErrorType[]) {
+export class WSError extends AbstractError<CharStream> {
+
+    constructor(rootCauses : ErrorType<CharStream>[], editDistance : number, success : Success<CharStream>) {
+        super();
         this._editDistance = editDistance;
-        this._modifiedString = modifiedString;
-        this._rootCauses = rootCauses;
+        this._success = Some(success);
     }
 
-    set causes(newCause : ErrorType[]) {
-        this._rootCauses = newCause;
-    }
-
-    // getTotalEdit() : number {
-    //     let total = this.edit;
-    //     let rootCause = this.rootCause();
-    //     if (rootCause.isDefined()) {
-    //         total += rootCause.get().getTotalEdit()
-    //     }
-    //     return total;
-    // }
-
-    get modString(){return this._modifiedString;}
-    
-    set modString(s : CharStream){this._modifiedString = s;}
-
-    get edit(): number {
-        return this._editDistance;
-    }
-
-    set edit(d: number){
-        this._editDistance = d;
-    }
-
-    rootCauses() : Option<ErrorType[]> {
-        if (this._rootCauses == undefined) {
-            return None;
-        } else {
-            return Some(this._rootCauses);
-        }
-    }
-
-    explanation() : string {
+    explanation() {
         return "white space";
-    }
-
-    expectedStr() : string {
-        return " " ;
     }
 
     toString() : string {

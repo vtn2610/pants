@@ -1,62 +1,26 @@
+import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { Option, Some, None } from "space-lift";
-import { metriclcs, edit } from "../Edit/MetricLcs";
+import { edit } from "../Edit/MetricLcs";
 import { CharUtil } from "../charstream"
 import CharStream = CharUtil.CharStream;
+import { totalmem } from 'os';
+import { AbstractError } from './AbstractError';
+import { Primitives } from '../primitives';
+import Success = Primitives.Success;
 
-export class SeqError implements ErrorType {
-    public _editDistance : number;
-    public _modifiedString: CharStream;
-    private _rootCauses : ErrorType[] | undefined;
-    
-    constructor(editDistance : number, modifiedString: CharStream, rootCauses? : ErrorType[]) {
+export class SeqError<T> extends AbstractError<T> {
+
+    constructor(rootCauses : ErrorType<T>[], editDistance : number, success : Success<T>) {
+        super();
         this._editDistance = editDistance;
-        this._modifiedString = modifiedString;
-        this._rootCauses = rootCauses;
+        this._success = Some(success);
     }
 
-    set causes(newCause : ErrorType[]) {
-        this._rootCauses = newCause;
-    }
-
-    // getTotalEdit() : number {
-    //     let total = this.edit;
-    //     let rootCause = this.rootCauses();
-    //     if (rootCause.isDefined()) {
-    //         total += rootCause.get().getTotalEdit()
-    //     }
-    //     return total;
-    // }
-
-    get modString(){return this._modifiedString;}
-    
-    set modString(s : CharStream){this._modifiedString = s;}
-
-    get edit(): number {
-        return this._editDistance;
-    }
-
-    set edit(d: number){
-        this._editDistance = d;
-    }
-
-    rootCauses() : Option<ErrorType[]> {
-        if (this._rootCauses == undefined) {
-            return None;
-        } else {
-            return Some(this._rootCauses);
-        }
-    }
-
-    explanation() : string {
-        return "";
-    }
-
-    expectedStr() : string {
-        return "" ;
+    explanation() {
+        return "bind";
     }
 
     toString() : string {
-        return "SeqError"; 
+        return "BindError"; 
     }
 }

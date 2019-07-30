@@ -4,13 +4,15 @@ import { edit } from "../Edit/MetricLcs";
 import { getPackedSettings } from 'http2';
 import { CharUtil } from "../charstream"
 import CharStream = CharUtil.CharStream;
+import { Primitives } from '../primitives';
+import Success = Primitives.Success;
 
-export interface ErrorType {
+export interface ErrorType<T> {
     //getTotalEdit() : number
-    causes : ErrorType[];
-    rootCauses() : Option<ErrorType[]>
+    success : Success<T>
+    causes : ErrorType<T>[]
     explanation() : string
-    expectedStr(): string
+    //expectedStr(): string
     edit : number 
     modString : CharStream
 }

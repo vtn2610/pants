@@ -1,68 +1,29 @@
 import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { metriclcs, edit } from "../Edit/MetricLcs";
+import { edit } from "../Edit/MetricLcs";
 import { CharUtil } from "../charstream"
 import CharStream = CharUtil.CharStream;
+import { totalmem } from 'os';
+import { AbstractError } from './AbstractError';
+import { Primitives } from '../primitives';
+import Success = Primitives.Success;
 
-export class StringError implements ErrorType {
-    public _expectedStr : string;
-    public _editDistance : number;
-    public _modifiedString: CharStream;
-    private _rootCauses : ErrorType[] | undefined;
+export class StringError extends AbstractError<CharStream> {
 
-    constructor(expectedStr : string, editDistance : number, modifiedString: CharStream, rootCauses? : ErrorType[]) {
-        this._expectedStr = expectedStr;
+    private _expectedStr : string;
+
+    constructor(rootCauses : ErrorType<CharStream>[], editDistance : number, success : Success<CharStream>, expectedStr : string) {
+        super();
         this._editDistance = editDistance;
-        this._modifiedString = modifiedString;
-        this._rootCauses = rootCauses;
+        this._success = Some(success);
+        this._expectedStr = expectedStr;
     }
 
-    set causes(newCause : ErrorType[]) {
-        this._rootCauses = newCause;
+    explanation() {
+        return "character " + " ' " + this._expectedStr + " ' "; 
     }
 
-    // getTotalEdit() : number {
-    //     let total = this.edit;
-    //     let rootCause = this.rootCause();
-    //     if (rootCause.isDefined()) {
-    //         total += rootCause.get().getTotalEdit()
-    //     }
-    //     return total;
-    // }
-
-    get modString(){return this._modifiedString;}
-    
-    set modString(s : CharStream){this._modifiedString = s;}
-
-    get edit(): number {
-        return this._editDistance;
-    }
-
-    set edit(d: number){
-        this._editDistance = d;
-    }
-
-    rootCauses() : Option<ErrorType[]> {
-        if (this._rootCauses == undefined) {
-            return None;
-        } else {
-            return Some(this._rootCauses);
-        }
-    }
-
-    explanation() : string {
-        return "string " + " ' " + this._expectedStr + " ' "; 
-    }
-
-    minEdit(input: string, expectedStr: string) : edit[] {
-        return metriclcs(input, expectedStr);
-    }
-
-    expectedStr() : string {
-        return this._expectedStr;
-    }
-
-    toString() {
-        return "StringError -> " + " ' " + this._expectedStr + " ' "; 
+    toString() : string {
+        return "CharError -> " + " ' " + this._expectedStr + " ' "; 
     }
 }

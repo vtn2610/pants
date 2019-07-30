@@ -1,48 +1,23 @@
+import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { Option, Some, None } from "space-lift";
-import { metriclcs, edit } from "../Edit/MetricLcs";
+import { edit } from "../Edit/MetricLcs";
 import { CharUtil } from "../charstream"
 import CharStream = CharUtil.CharStream;
+import { totalmem } from 'os';
+import { AbstractError } from './AbstractError';
+import { Primitives } from '../primitives';
+import Success = Primitives.Success;
 
-export class ItemError implements ErrorType {
-    public _editDistance : number;
-    public _modifiedString: CharStream;
+export class ItemError extends AbstractError<CharStream> {
 
-    constructor(editDistance : number, modifiedString: CharStream) {
+    constructor(rootCauses : ErrorType<CharStream>[], editDistance : number, success : Success<CharStream>) {
+        super();
         this._editDistance = editDistance;
-        this._modifiedString = modifiedString;
-    }
-
-    set causes(newCause : ErrorType[]) {
-    }
-
-    // getTotalEdit() : number {
-    //     let total = this.edit;
-    //     let rootCause = this.rootCause();
-    //     if (rootCause.isDefined()) {
-    //         total += rootCause.get().getTotalEdit()
-    //     }
-    //     return total;
-    // }
-
-    get modString(){return this._modifiedString;}
-    
-    set modString(s : CharStream){this._modifiedString = s;}
-
-    get edit(): number {return this._editDistance;}
-
-    set edit(d : number){this._editDistance = d;}
-
-    rootCauses() : Option<ErrorType[]> {
-        return None;
-    }
-
-    expectedStr() : string {
-        return " ";
+        this._success = Some(success);
     }
 
     explanation() {
-        return "";
+        return "something";
     }
 
     toString() : string {

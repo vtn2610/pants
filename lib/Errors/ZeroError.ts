@@ -8,19 +8,13 @@ import { AbstractError } from './AbstractError';
 import { Primitives } from '../primitives';
 import Success = Primitives.Success;
 
-export class BindError<T> extends AbstractError<T> {
-
-    constructor(rootCauses : ErrorType<T>[], editDistance : number, success : Success<T>) {
-        super();
-        this._editDistance = editDistance;
-        this._success = Some(success);
-    }
+export class ZeroError<T> extends AbstractError<T> {
 
     explanation() {
-        return "bind";
+        return "zero";
     }
 
     toString() : string {
-        return "BindError"; 
+        return "ZeroError"; 
     }
 }

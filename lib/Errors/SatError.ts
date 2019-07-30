@@ -1,60 +1,26 @@
 import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { edit, metriclcs } from "../Edit/MetricLcs";
+import { edit } from "../Edit/MetricLcs";
 import { CharUtil } from "../charstream"
 import CharStream = CharUtil.CharStream;
+import { totalmem } from 'os';
+import { AbstractError } from './AbstractError';
+import { Primitives } from '../primitives';
+import Success = Primitives.Success;
 
-export class SatError implements ErrorType {
-    private _expectedStr : string[];
-    public _editDistance : number;
-    public _modifiedString : CharStream;
+export class SatError extends AbstractError<CharStream> {
 
-    constructor(expectedStr : string[], editDistance : number, modifiedString : CharStream) {
-        this._expectedStr = expectedStr;
+    constructor(rootCauses : ErrorType<CharStream>[], editDistance : number, success : Success<CharStream>) {
+        super();
         this._editDistance = editDistance;
-        this._modifiedString = modifiedString
-    }
-    set causes(newCause : ErrorType[]) {
-    }
-
-    get modString(){return this._modifiedString;}
-    
-    set modString(s : CharStream){this._modifiedString = s;}
-
-    get edit(): number {
-        return this._editDistance;
-    }
-
-    // getTotalEdit() : number {
-    //     let total = this.edit;
-    //     let rootCause = this.rootCause();
-    //     if (rootCause.isDefined()) {
-    //         total += rootCause.get().getTotalEdit()
-    //     }
-    //     return total;
-    // }
-
-    set edit(d: number){
-        this._editDistance = d;
-    }
-
-    rootCauses() : Option<ErrorType[]> {
-        return None;
-    }
-
-    get errors() : string[] {
-        return this._expectedStr;
+        this._success = Some(success);
     }
 
     explanation() {
-        return "";
-    }
-
-    expectedStr(): string{
-        return this._expectedStr[0];
+        return "sat";
     }
 
     toString() {
-        return "SatError -> " + this._expectedStr; 
+        return "SatError";
     }
 }

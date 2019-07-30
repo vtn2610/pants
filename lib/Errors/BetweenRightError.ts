@@ -1,59 +1,23 @@
 import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
 import { edit } from "../Edit/MetricLcs";
-import { CharUtil } from "../charstream";
+import { CharUtil } from "../charstream"
 import CharStream = CharUtil.CharStream;
+import { totalmem } from 'os';
+import { AbstractError } from './AbstractError';
+import { Primitives } from '../primitives';
+import Success = Primitives.Success;
 
-export class BetweenRightError implements ErrorType {
-    private _rootCauses : ErrorType[];
-    public _editDistance : number;
-    public _modifiedString: CharStream;
-    
-    constructor(rootCauses : ErrorType[], editDistance : number,  modifiedString: CharStream) {
-        this._rootCauses = rootCauses;
+export class BetweenRightError<T> extends AbstractError<T> {
+
+    constructor(rootCauses : ErrorType<T>[], editDistance : number, success : Success<T>) {
+        super();
         this._editDistance = editDistance;
-        this._modifiedString = modifiedString;
-    }
-
-    // getTotalEdit() : number {
-    //     let total = this.edit;
-    //     let rootCause = this.rootCause();
-    //     if (rootCause.isDefined()) {
-    //         total += rootCause.get().getTotalEdit()
-    //     }
-    //     return total;
-    // }
-    
-    set causes(newCause : ErrorType[]) {
-        this._rootCauses = newCause;
-    }
-
-    get modString(){return this._modifiedString;}
-    
-    set modString(s : CharStream){this._modifiedString = s;}
-
-    get edit(): number {
-        return this._editDistance;
-    }
-
-    set edit(d: number){
-        this._editDistance = d;
-    }
-
-    rootCauses() : Option<ErrorType[]> {
-        if (this._rootCauses == undefined) {
-            return None;
-        } else {
-            return Some(this._rootCauses);
-        }
+        this._success = Some(success);
     }
 
     explanation() : string {
-        return "right part";
-    }
-
-    expectedStr() : string {
-        return ")";
+        return "left";
     }
 
     toString() {

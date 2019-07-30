@@ -11,6 +11,7 @@ import { StringError } from "./Errors/StringError";
 import { BetweenLeftError } from "./Errors/BetweenLeftError";
 import { BetweenRightError } from "./Errors/BetweenRightError";
 import { BindError } from "./Errors/BindError";
+import { ZeroError } from "./Errors/ZeroError";
 import { SeqError } from "./Errors/SeqError";
 import { None, Some, Option } from "space-lift";
 import { metriclcs, edit } from "./Edit/MetricLcs";
@@ -29,8 +30,8 @@ export namespace Primitives {
     /**
      * Represents an Errors composition function.
      */
-    export interface EComposer {
-        (f: ErrorType): ErrorType;
+    export interface EComposer<T> {
+        (f: ErrorType<T>): ErrorType<T>;
     } 
 
     /**
@@ -55,11 +56,11 @@ export namespace Primitives {
     /**
      * Represents a failed parse.
      */
-    export class Failure {
+    export class Failure<T> {
         tag: "failure" = "failure";
         inputstream: CharStream;
         error_pos: number;
-        error: ErrorType;
+        error: ErrorType<T>;
 
         /**
          * Returns an object representing a failed parse.
@@ -70,7 +71,7 @@ export namespace Primitives {
          */
         constructor(
             istream: CharStream, error_pos: number,
-            error: ErrorType
+            error: ErrorType<T>
         ) {
             this.inputstream = istream;
             this.error_pos = error_pos;
@@ -81,7 +82,7 @@ export namespace Primitives {
     /**
      * Union type representing a successful or failed parse.
      */
-    export type Outcome<T> = Success<T> | Failure;
+    export type Outcome<T> = Success<T> | Failure<T>;
 
     /**
      * Generic type of a parser.
@@ -106,7 +107,20 @@ export namespace Primitives {
      */
     export function zero<T>(expecting: string): IParser<T> {
         return (istream) => {
-            return new Failure(istream, istream.startpos, new StringError(expecting,0, new CharStream("")));
+            return new Failure(istream, istream.startpos, new ZeroError());
+        }
+    }
+
+    /**
+     * eresult runs the parser p, and then, regardless of
+     * Success or Failure, runs the function f on the outcome.
+     * @param p eresults 
+     */
+    export function eresult<T>(p: IParser<T>) {
+        return (f: (o: Outcome<T>) => Outcome<T>) => {
+            return (istream: CharUtil.CharStream) => {
+                return f(p(istream));
+            }
         }
     }
 
@@ -123,9 +137,9 @@ export namespace Primitives {
      * @param f A function that produces a new Errors given an existing Errors
      */
     export let count = 0;
-    export function expect<T>(parser: IParser<T>) : (f: EComposer) => IParser<T> {
+    export function expect<T>(parser: IParser<T>) : (f: EComposer<T>) => IParser<T> {
         count++;
-        return (f: EComposer) => {
+        return (f: EComposer<T>) => {
             return (istream: CharStream) => {
                 let outcome: Outcome<T> = parser(istream);
                 switch (outcome.tag) {
@@ -195,7 +209,7 @@ export namespace Primitives {
                                 let o = f(r.result)(r.inputstream);
                                 switch (o.tag) {
                                     case "success":
-                                    // case 1: both parsers succeeds
+                                    // case 1: both parsers succeed
                                         break;
                                     case "failure": // note: backtracks, returning original istream
                                     // case 2: parser 1 succeeds, 2 fails
@@ -225,21 +239,50 @@ export namespace Primitives {
      * a single result.
      * @param p A parser
      */
-    export function seq<T, U, V>(p: IParser<T>) {
-        return (q: IParser<U>) => {
-            return (f: (e: [T, U]) => V) => {
-                return bind<T, V>(p)((x) => {
-                    
+    // export function seq<T, U, V>(p: IParser<T>) {
+    //     return (q: IParser<U>) => {
+    //         return (f: (e: [T, U]) => V) => {
+    //             bind<T, V>(p)((x: T) => {
+    //                 return bind<U, V>(q)((y : U) => {
+    //                     let tup: [T, U] = [x, y];
+    //                     return result<V>(f(tup));
+    //                 });
+    //             });      
+    //         }
+    //     };
+    // }
 
-                    return bind<U, V>(q)((y) => {
-
-
-                        let tup: [T, U] = [x, y];
-                        return result<V>(f(tup));
-                    });
-                });
+    export function seq<T, U, V>(p : IParser<T>) {
+        return (q : IParser<U>) => {
+            return (f: (e : [T,U]) => V) => {
+                return (istream: CharUtil.CharStream) => {
+                    let result = p(istream);
+                    switch (result.tag) {
+                        case "success":
+                            let result2 = q(result.inputstream)
+                            switch (result2.tag) {
+                                case "success":
+                                    // case: both suceed
+                                    return f([result.result, result2.result]);
+                                default:
+                                    // case: q failed
+                                    // what we want: q should return the result of f
+                                    // AS IF it succeeded (after modifying input)
+                                    return f([result.result, result2.error.success.result]);
+                            }
+                        case "failure":
+                            // the corrected input from failure of parser p
+                            let result3 = q(result.error.success.inputstream);
+                            switch (result3.tag) {
+                                case "success":
+                                    return f([result.error.success.result, result3.result]);
+                                default:
+                                    return f([result.error.success.result, result3.error.success.result]);
+                            }
+                    }
+                }
             }
-        };
+        }
     }
 
     /**
