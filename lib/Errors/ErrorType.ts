@@ -12,7 +12,7 @@ export interface ErrorType<T> {
     success : Success<T>
     causes : ErrorType<T>[]
     explanation() : string
-    //expectedStr(): string
+    expectedStr: string
     edit : number 
     modString : CharStream
 }

@@ -16,6 +16,10 @@ export class LetterError extends AbstractError<CharStream> {
         this._success = Some(success);
     }
 
+    get expectedStr() : string{
+        return "a";
+    } 
+
     explanation() {
         return "letter";
     }

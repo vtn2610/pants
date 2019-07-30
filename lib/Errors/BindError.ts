@@ -16,6 +16,14 @@ export class BindError<T> extends AbstractError<T> {
         this._success = Some(success);
     }
 
+    get expectedStr() : string{
+        if (this._rootCauses.isDefined()) {
+            return this._rootCauses.get()[0].expectedStr
+        } else {
+            throw new Error("no expected String")
+        }
+    } 
+
     explanation() {
         return "bind";
     }

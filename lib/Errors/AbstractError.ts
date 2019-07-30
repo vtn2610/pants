@@ -37,6 +37,8 @@ export abstract class AbstractError<T> implements ErrorType<T> {
     
     abstract explanation() : string
     
+    abstract expectedStr: string
+    
     get edit(): number {
         return this._editDistance;
     }

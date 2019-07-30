@@ -10,6 +10,10 @@ import Success = Primitives.Success;
 
 export class ZeroError<T> extends AbstractError<T> {
 
+    get expectedStr() : string{
+        return "";
+    } 
+
     explanation() {
         return "zero";
     }

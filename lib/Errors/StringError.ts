@@ -19,6 +19,10 @@ export class StringError extends AbstractError<CharStream> {
         this._expectedStr = expectedStr;
     }
 
+    get expectedStr() : string{
+        return this._expectedStr;
+    } 
+
     explanation() {
         return "character " + " ' " + this._expectedStr + " ' "; 
     }

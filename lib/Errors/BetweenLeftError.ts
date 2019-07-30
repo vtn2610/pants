@@ -16,6 +16,13 @@ export class BetweenLeftError<T> extends AbstractError<T> {
         this._success = Some(success);
     }
 
+    get expectedStr() : string{
+        if (this._rootCauses.isDefined()) {
+            return this._rootCauses.get()[0].expectedStr
+        } else {
+            throw new Error("no expected String")
+        }
+    }   
     explanation() : string {
         return "left";
     }

@@ -16,6 +16,10 @@ export class ItemError extends AbstractError<CharStream> {
         this._success = Some(success);
     }
 
+    get expectedStr() : string{
+        return " ";
+    } 
+    
     explanation() {
         return "something";
     }

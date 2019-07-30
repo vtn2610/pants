@@ -8,23 +8,17 @@ import { AbstractError } from './AbstractError';
 import { Primitives } from '../primitives';
 import Success = Primitives.Success;
 
-export class DigitError extends AbstractError<CharStream> {
-
-    constructor(rootCauses : ErrorType<CharStream>[], editDistance : number, success : Success<CharStream>) {
-        super();
-        this._editDistance = editDistance;
-        this._success = Some(success);
-    }
+export class EOFError extends AbstractError<CharStream> {
 
     get expectedStr() : string{
-        return "0";
+        return "eof";
     } 
     
     explanation() {
-        return "number";
+        return "eof";
     }
 
     toString() : string {
-        return "DigitError"; 
+        return "EOFError"; 
     }
 }
