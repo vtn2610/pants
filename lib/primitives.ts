@@ -14,6 +14,7 @@ import { BindError } from "./Errors/BindError";
 import { ZeroError } from "./Errors/ZeroError";
 import { SeqError } from "./Errors/SeqError";
 import { EOFError } from "./Errors/EOFError";
+import { GenericError } from "./Errors/GenericError";
 import { None, Some, Option } from "space-lift";
 import { metriclcs, edit } from "./Edit/MetricLcs";
 import { parser } from "marked";
@@ -125,6 +126,16 @@ export namespace Primitives {
         }
     }
 
+        /**
+     * failParser takes a Failure and returns a parser guaranteed to fail
+     * @param fail Failure<T>
+     */
+    export function failParser<T>(fail: Failure<T>): IParser<T> {
+        return (istream: CharStream) => {
+            return fail;
+        }
+    }
+
      /**
      * eresult runs the parser p, and then, regardless of
      * Success or Failure, runs the function f on the outcome.
@@ -184,6 +195,20 @@ export namespace Primitives {
         };
     }
 
+    export function expectToFail<T>(parser: IParser<T>) : (f: EComposer<T>) => IParser<T> {
+        return (f: EComposer<T>) => {
+            return (istream: CharStream) => {
+                let outcome: Outcome<T> = parser(istream);
+                switch (outcome.tag){
+                    case "success":
+                        let e = new GenericError([],0,outcome);
+                        return new Failure(outcome.inputstream, outcome.inputstream.startpos, e);
+                    default:
+                        return expect(parser)(f)(istream);
+                }
+            }
+        };
+    }
 
     /**
      * item successfully consumes the first character if the input
@@ -212,7 +237,7 @@ export namespace Primitives {
      * is returned in the Failure object (i.e., bind backtracks).
      * @param p A parser
      */
-    export function bind<T, U>(p: IParser<T>){
+    export function bind<T, U>(p: IParser<T>) {
         return (f: (t: T) => IParser<U>) => {
             function _bind<T, U>(p: IParser<T>) {
                 return (f: (t: T) => IParser<U>) => {
@@ -220,24 +245,25 @@ export namespace Primitives {
                         let r = p(istream);
                         switch (r.tag) {
                             case "success":
-                                let o = f(r.result)(r.inputstream);
+                                let o: Outcome<U> = f(r.result)(r.inputstream);
                                 switch (o.tag) {
                                     case "success":
                                     // case 1: both parsers succeed
-                                        break;
-                                    case "failure": // note: backtracks, returning original istream
+                                        return o;
+                                    default: // note: backtracks, returning original istream
                                     // case 2: parser 1 succeeds, 2 fails
-                                        return new Failure<U>(istream, o.error_pos, o.error);
+                                        return new Failure<U>(istream, o.error_pos, 
+                                            new BindError(o.error.causes,o.error.edit,o.error.success));
                                 }
-                                return o;
                             case "failure":
                                 //apply parser again with modified inputstream;
-                                return new Failure<T>(istream, r.error_pos, r.error);
+                                return expectToFail(f(r.error.success.result))(error => 
+                                    new BindError(error.causes, error.edit, error.success));
                         }
                     }
                 }
             }
-            return expect(_bind<T,U>(p)(f))((e: ErrorType<T>) => new BindError(e.causes,e.edit,e.success))
+            return _bind<T,U>(p)(f)
         }
     }
 
@@ -253,19 +279,6 @@ export namespace Primitives {
      * a single result.
      * @param p A parser
      */
-    // export function seq<T, U, V>(p: IParser<T>) {
-    //     return (q: IParser<U>) => {
-    //         return (f: (e: [T, U]) => V) => {
-    //             bind<T, V>(p)((x: T) => {
-    //                 return bind<U, V>(q)((y : U) => {
-    //                     let tup: [T, U] = [x, y];
-    //                     return result<V>(f(tup));
-    //                 });
-    //             });      
-    //         }
-    //     };
-    // }
-
     export function seq<T, U, V>(p : IParser<T>) {
         return (q : IParser<U>) => {
             return (f: (e : [T,U]) => V) => {
@@ -304,7 +317,7 @@ export namespace Primitives {
      * single character if the character satisfies the predicate,
      * otherwise it fails.
      */
-    export function sat(char_class: string[]): IParser<CharStream>{
+    export function sat(char_class: string[]): IParser<CharStream> {
         function _sat(char_class: string[]): IParser<CharStream> {
             let f = (x: CharStream) => {
                 return (char_class.indexOf(x.toString()) > -1)
