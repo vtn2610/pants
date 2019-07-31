@@ -182,21 +182,6 @@ export namespace Primitives {
         };
     }
 
-    export function expectToFail<T>(parser: IParser<T>) : (f: EComposer) => IParser<T> {
-        return (f: EComposer) => {
-            return (istream: CharStream) => {
-                let outcome: Outcome<T> = parser(istream);
-                switch (outcome.tag){
-                    case "success":
-                        let e = new GenericError([],0);
-                        return new Failure(outcome.inputstream, outcome.inputstream.startpos, [e]);
-                    default:
-                        return expect(parser)(f)(istream);
-                }
-            }
-        };
-    }
-
     /**
      * item successfully consumes the first character if the input
      * string is non-empty, otherwise it fails.
@@ -205,7 +190,7 @@ export namespace Primitives {
         function _item() {
             return (istream: CharStream) => {
                 if (istream.isEmpty()) {
-                    return new Failure(istream, istream.startpos, [new ItemError([],0)]);
+                    return new Failure(istream.startpos, [new ItemError()]);
                 } else {
                     let remaining = istream.tail(); // remaining string;
                     let res = istream.head(); // result of parse;
@@ -239,15 +224,23 @@ export namespace Primitives {
                                         return o;
                                     default: // note: backtracks, returning original istream
                                     // case 2: parser 1 succeeds, 2 fails
-                                        let o2 : Outcome<U>= new Failure<U>(istream, o.error_pos, 
-                                            new BindError(o.error.causes,o.error.edit,o.error.success));
+                                        let o2 : Outcome<U>= new Failure(o.error_pos, o.errors);
                                         return o2;
                                 }
                             case "failure":
                                 //apply parser again with modified inputstream;
-                                let o3 : Outcome<U>= expectToFail(f(r.error.success.result))(error => 
-                                    new BindError(error.causes, error.edit, error.success))(r.error.success.inputstream);
-                                return o3;
+                                const flatMap = (f : any, arr : any[]) => arr.reduce((x, y) => [...x, ...f(y)], [])
+
+                                let errors : ErrorType[] = flatMap((e : ErrorType) => {
+                                    let r2 = p(e.modStream);
+                                    switch (r2.tag){
+                                        case "success":
+                                            return [e];
+                                        default:
+                                            return r2.errors;
+                                    }
+                                }, r.errors);
+                                return new Failure(r.error_pos, errors);
                         }
                     }
                 }
@@ -268,41 +261,19 @@ export namespace Primitives {
      * a single result.
      * @param p A parser
      * 
-     * // (q: IParser<U>) => (f: (e: [T,U]) => V) => IParser<V>
      */
-    export function seq<T, U, V>(p : IParser<T>) {
-        return (q : IParser<U>) => {
-            return (f: (e : [T,U]) => V) => {
-                return (istream: CharUtil.CharStream) => {
-                    let result = p(istream);
-                    switch (result.tag) {
-                        case "success":
-                            let result2 = q(result.inputstream)
-                            switch (result2.tag) {
-                                case "success":
-                                    // case: both succeed
-                                    return new Success<V>(result2.inputstream,f([result.result, result2.result]));
-                                default:
-                                    // case: q failed
-                                    // what we want: q should return the result of f
-                                    // AS IF it succeeded (after modifying input)
-                                    let f1 = f([result.result, result2.error.success.result]);
-                                    return new Failure<V>(result2.error.success.inputstream,result2.error.success.inputstream.startpos, 
-                                        new SeqError<V>(result2.error.causes,result2.error.edit, new Success(result2.inputstream,result2.error.success.result));
-                            }
-                        case "failure":
-                            // the corrected input from failure of parser p
-                            let result3 = q(result.error.success.inputstream);
-                            switch (result3.tag) {
-                                case "success":
-                                    return f([result.error.success.result, result3.result]);
-                                default:
-                                    return f([result.error.success.result, result3.error.success.result]);
-                            }
-                    }
-                }
+
+    export function seq<T, U, V>(p: IParser<T>) {
+        return (q: IParser<U>) => {
+            return (f: (e: [T, U]) => V) => {
+                return bind<T, V>(p)((x) => {
+                    return bind<U, V>(q)((y) => {
+                        let tup: [T, U] = [x, y];
+                        return result<V>(f(tup));
+                    });
+                });
             }
-        }
+        };
     }
 
     /**
@@ -315,7 +286,7 @@ export namespace Primitives {
             let f = (x: CharStream) => {
                 return (char_class.indexOf(x.toString()) > -1)
                     ? result(x)
-                    : (istream: CharStream) => new Failure(istream, istream.startpos - 1, new SatError([],0,new Success(istream,new CharStream("")),char_class));
+                    : (istream: CharStream) => new Failure(istream, istream.startpos - 1, new SatError([],0,char_class));
             };
             return bind<CharStream, CharStream>(item())(f);
         }
@@ -631,7 +602,7 @@ export namespace Primitives {
                     break;
                 case "failure":
                     console.log(o);
-                    return new Failure(o.error.modString, o.error_pos, new StringError(o.error.causes,o.error.edit,o.error.success,s));
+                    return new Failure(o.error_pos, [new StringError(o.error.causes,o.error.edit,s)]);
             }
             return o;
         }
@@ -643,7 +614,7 @@ export namespace Primitives {
      */
     export function eof(): IParser<EOFMark> {
         return (istream: CharStream) => {
-            return istream.isEOF() ? new Success(istream, EOF) : new Failure(istream, istream.startpos, [new EOFError()]);
+            return istream.isEOF() ? new Success(istream, EOF) : new Failure(istream.startpos, [new EOFError()]);
         }
     }
 

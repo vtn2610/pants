@@ -8,9 +8,8 @@ import { AbstractError } from './AbstractError';
 
 export class ItemError extends AbstractError{
 
-    constructor(rootCauses : ErrorType[], editDistance : number) {
+    constructor() {
         super();
-        this._editDistance = editDistance;
     }
 
     get expectedStr() : string{

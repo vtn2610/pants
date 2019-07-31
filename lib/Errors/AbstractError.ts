@@ -9,6 +9,7 @@ import Success = Primitives.Success;
 export abstract class AbstractError implements ErrorType {
     protected _editDistance : number = 0;
     protected _rootCauses : Option<ErrorType[]> = None;
+    protected _modStream : CharStream = new CharStream("");
 
     get causes() : ErrorType[] {
         if (this._rootCauses.isDefined()) {
@@ -32,6 +33,11 @@ export abstract class AbstractError implements ErrorType {
         this._editDistance = d;
     }
 
-    abstract modStream : CharStream;
-    
+    get modStream() : CharStream {
+        return this._modStream;
+    }
+        
+    set modStream(s: CharStream){
+        this._modStream = s;
+    }
 }
