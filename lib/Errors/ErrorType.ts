@@ -15,4 +15,5 @@ export interface ErrorType<T> {
     expectedStr: string
     edit : number 
     modString : CharStream
+    convertToType<U>(f: (t: T) => U) : ErrorType<U>
 }

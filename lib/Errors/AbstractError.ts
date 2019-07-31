@@ -54,4 +54,15 @@ export abstract class AbstractError<T> implements ErrorType<T> {
             throw new Error("Success is not defined");
         }
     }
+
+    convertToType<U>(f: (t: T) => U) : ErrorType<U> {
+        let uS : ErrorType<U>[] = []
+        if (this._rootCauses.isDefined()){
+            for (let item of this._rootCauses.get()){
+                let u = f(item.success.result);
+                let 
+            }
+        }
+        
+    }
 }

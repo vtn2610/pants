@@ -136,19 +136,6 @@ export namespace Primitives {
         }
     }
 
-     /**
-     * eresult runs the parser p, and then, regardless of
-     * Success or Failure, runs the function f on the outcome.
-     * @param p eresults 
-     */
-    export function typeConvert<T,U>(p: IParser<T>) {
-        return (f: (o: Outcome<T>) => U) => {
-            return (istream: CharStream) => {
-                return f(p(istream));
-            }
-        }
-    }
-
     export function minEdit(input : string, expectedStr : string) {
         return metriclcs(input, expectedStr);
     }
@@ -252,13 +239,15 @@ export namespace Primitives {
                                         return o;
                                     default: // note: backtracks, returning original istream
                                     // case 2: parser 1 succeeds, 2 fails
-                                        return new Failure<U>(istream, o.error_pos, 
+                                        let o2 : Outcome<U>= new Failure<U>(istream, o.error_pos, 
                                             new BindError(o.error.causes,o.error.edit,o.error.success));
+                                        return o2;
                                 }
                             case "failure":
                                 //apply parser again with modified inputstream;
-                                return expectToFail(f(r.error.success.result))(error => 
-                                    new BindError(error.causes, error.edit, error.success));
+                                let o3 : Outcome<U>= expectToFail(f(r.error.success.result))(error => 
+                                    new BindError(error.causes, error.edit, error.success))(r.error.success.inputstream);
+                                return o3;
                         }
                     }
                 }
@@ -278,6 +267,8 @@ export namespace Primitives {
      * f takes the result of p and q, as a tuple, and returns
      * a single result.
      * @param p A parser
+     * 
+     * // (q: IParser<U>) => (f: (e: [T,U]) => V) => IParser<V>
      */
     export function seq<T, U, V>(p : IParser<T>) {
         return (q : IParser<U>) => {
@@ -290,12 +281,14 @@ export namespace Primitives {
                             switch (result2.tag) {
                                 case "success":
                                     // case: both suceed
-                                    return f([result.result, result2.result]);
+                                    return new Success<V>(result2.inputstream,f([result.result, result2.result]));
                                 default:
                                     // case: q failed
                                     // what we want: q should return the result of f
                                     // AS IF it succeeded (after modifying input)
-                                    return f([result.result, result2.error.success.result]);
+                                    let f1 = f([result.result, result2.error.success.result]);
+                                    return new Failure<V>(result2.error.success.inputstream,result2.error.success.inputstream.startpos, 
+                                        new SeqError<V>(result2.error.causes,result2.error.edit, new Success(result2.inputstream,result2.error.success.result));
                             }
                         case "failure":
                             // the corrected input from failure of parser p
@@ -607,12 +600,16 @@ export namespace Primitives {
      */
     export function many1<T>(p: IParser<T>) {
         return (istream: CharStream) => {
-            return expect(seq<T, T[], T[]>(p)(many<T>(p))(tup => {
-                let hd: T = tup["0"];
-                let tl: T[] = tup["1"];
-                tl.unshift(hd);
-                return tl;
-            }))((error : ErrorType<T>)  => error)(istream);
+            // let p2: IParser<T> = seq<T, T[], T[]>(p)(many<T>(p))(tup => {
+            //     let hd: T = tup["0"];
+            //     let tl: T[] = tup["1"];
+            //     tl.unshift(hd);
+            //     return tl;
+            // });
+            let p2: IParser<T> = seq<T, T[], T[]>(p)(many<T>(p))(t => []);
+
+            throw new Error();
+            // return expect())((error : ErrorType<T>)  => error);
         };
     }
 
