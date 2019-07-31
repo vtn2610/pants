@@ -8,14 +8,13 @@ import { AbstractError } from './AbstractError';
 import { Primitives } from '../primitives';
 import Success = Primitives.Success;
 
-export class SatError extends AbstractError<CharStream> {
+export class SatError extends AbstractError {
 
     private _expectedChars : string[];
     
-    constructor(rootCauses : ErrorType<CharStream>[], editDistance : number, success : Success<CharStream>, expectedChars : string[]) {
+    constructor(rootCauses : ErrorType[], editDistance : number, expectedChars : string[]) {
         super();
         this._editDistance = editDistance;
-        this._success = Some(success);
         this._expectedChars = expectedChars;
     }
 

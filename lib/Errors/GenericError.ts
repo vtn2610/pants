@@ -8,12 +8,11 @@ import { AbstractError } from './AbstractError';
 import { Primitives } from '../primitives';
 import Success = Primitives.Success;
 
-export class GenericError<T> extends AbstractError<T> {
+export class GenericError extends AbstractError {
 
-    constructor(rootCauses : ErrorType<T>[], editDistance : number, success : Success<T>) {
+    constructor(rootCauses : ErrorType[], editDistance : number) {
         super();
         this._editDistance = editDistance;
-        this._success = Some(success);
     }
 
     get expectedStr() : string{

@@ -7,13 +7,28 @@ import CharStream = CharUtil.CharStream;
 import { Primitives } from '../primitives';
 import Success = Primitives.Success;
 
-export interface ErrorType<T> {
-    //getTotalEdit() : number
-    success : Success<T>
-    causes : ErrorType<T>[]
-    explanation() : string
+export interface ErrorType {
+    /**
+     * Property that returns the set of
+     * possible errors
+     */
+    causes : ErrorType[]
+
+    /**
+     * Property that returns the expected
+     * string for the error
+     */
     expectedStr: string
+
+    /**
+     * Property that returns the edit
+     * distance of the corrected string
+     */
     edit : number 
-    modString : CharStream
-    convertToType<U>(f: (t: T) => U) : ErrorType<U>
+
+    /**
+     * Property that returns the modified input
+     * stream
+     */
+    modStream : CharStream
 }

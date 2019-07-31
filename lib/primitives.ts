@@ -32,8 +32,8 @@ export namespace Primitives {
     /**
      * Represents an Errors composition function.
      */
-    export interface EComposer<T> {
-        (f: ErrorType<T>): ErrorType<T>;
+    export interface EComposer {
+        (f: ErrorType): ErrorType;
     } 
 
     /**
@@ -58,33 +58,30 @@ export namespace Primitives {
     /**
      * Represents a failed parse.
      */
-    export class Failure<T> {
+    export class Failure {
         tag: "failure" = "failure";
-        inputstream: CharStream;
         error_pos: number;
-        error: ErrorType<T>;
+        errors: ErrorType[];
 
         /**
          * Returns an object representing a failed parse.
          *
-         * @param istream The string, unmodified, that was given to the parser.
          * @param error_pos The position of the parsing failure in istream
          * @param error The error message for the failure
          */
         constructor(
-            istream: CharStream, error_pos: number,
-            error: ErrorType<T>
+            error_pos: number,
+            errors: ErrorType[]
         ) {
-            this.inputstream = istream;
             this.error_pos = error_pos;
-            this.error = error;
+            this.errors = errors;
         }
     }
 
     /**
      * Union type representing a successful or failed parse.
      */
-    export type Outcome<T> = Success<T> | Failure<T>;
+    export type Outcome<T> = Success<T> | Failure;
 
     /**
      * Generic type of a parser.
@@ -109,7 +106,7 @@ export namespace Primitives {
      */
     export function zero<T>(expecting: string): IParser<T> {
         return (istream) => {
-            return new Failure(istream, istream.startpos, new ZeroError());
+            return new Failure(istream.startpos, [new ZeroError()]);
         }
     }
 
@@ -130,7 +127,7 @@ export namespace Primitives {
      * failParser takes a Failure and returns a parser guaranteed to fail
      * @param fail Failure<T>
      */
-    export function failParser<T>(fail: Failure<T>): IParser<T> {
+    export function failParser<T>(fail: Failure): IParser<T> {
         return (istream: CharStream) => {
             return fail;
         }
@@ -148,48 +145,51 @@ export namespace Primitives {
      * @param parser The parser to try
      * @param f A function that produces a new Errors given an existing Errors
      */
-    export let count = 0;
-    export function expect<T>(parser: IParser<T>) : (f: EComposer<T>) => IParser<T> {
-        count++;
-        return (f: EComposer<T>) => {
+    export function expect<T>(parser: IParser<T>) : (f: EComposer) => IParser<T> {
+        return (f: EComposer) => {
             return (istream: CharStream) => {
                 let outcome: Outcome<T> = parser(istream);
                 switch (outcome.tag) {
                     case "success":
                         return outcome;
                     case "failure":
-                        let newError : ErrorType<T> = outcome.error;
-                        //let windowSize = outcome.error.expectedStr().length;
-                        if (newError instanceof ItemError) {
-                            newError = f(outcome.error);
-                        }
+                        let fail: Failure = outcome;
+                        let errors : ErrorType[] = fail.errors;
 
-                        let windowSize = newError.expectedStr.length;
-                        let inputBound = istream.input.substring(outcome.error_pos, outcome.error_pos + windowSize);
-                
-                        let editsSet = minEdit(inputBound, newError.expectedStr);
-                        
-                        let edits : [number,CharStream] = editParse(parser, istream, outcome.error.edit, windowSize, outcome.error_pos, outcome.error_pos, editsSet);
-                       
+                        let newErrors : ErrorType[] = errors.map(e => {
+                            //computes the size of the substring required for LCS
+                            let windowSize = e.expectedStr.length;
 
-                        newError.edit = edits[0];
-                        let newStream = edits[1];
-                        newError.modString = newStream;
-                        
-                        return new Failure(newStream, istream.startpos, f(newError));
+                            //the actual substring inside window
+                            let inputBound = istream.input.substring(fail.error_pos, fail.error_pos + windowSize);
+
+                            //the set of edits returned via LCS
+                            let editsSet = minEdit(inputBound, e.expectedStr);
+
+                            //the corrected stream and edit distance after applying edits within window
+                            let edits : [number,CharStream] = editParse(parser, istream, e.edit, windowSize, fail.error_pos, fail.error_pos, editsSet);
+
+                            //set edit distance and modified stream in error object, and advance start pos
+                            e.edit = edits[0];
+                            e.modStream = edits[1].seek(windowSize);
+                            
+                            //apply error composition
+                            return f(e);
+                        });
+                        return new Failure(istream.startpos, newErrors);
                 }
             }
         };
     }
 
-    export function expectToFail<T>(parser: IParser<T>) : (f: EComposer<T>) => IParser<T> {
-        return (f: EComposer<T>) => {
+    export function expectToFail<T>(parser: IParser<T>) : (f: EComposer) => IParser<T> {
+        return (f: EComposer) => {
             return (istream: CharStream) => {
                 let outcome: Outcome<T> = parser(istream);
                 switch (outcome.tag){
                     case "success":
-                        let e = new GenericError([],0,outcome);
-                        return new Failure(outcome.inputstream, outcome.inputstream.startpos, e);
+                        let e = new GenericError([],0);
+                        return new Failure(outcome.inputstream, outcome.inputstream.startpos, [e]);
                     default:
                         return expect(parser)(f)(istream);
                 }
@@ -205,7 +205,7 @@ export namespace Primitives {
         function _item() {
             return (istream: CharStream) => {
                 if (istream.isEmpty()) {
-                    return new Failure(istream, istream.startpos, new ItemError([],0,new Success(istream, new CharStream(""))));
+                    return new Failure(istream, istream.startpos, [new ItemError([],0)]);
                 } else {
                     let remaining = istream.tail(); // remaining string;
                     let res = istream.head(); // result of parse;
@@ -214,7 +214,7 @@ export namespace Primitives {
             }
         }
 
-        return expect(_item())((error : ErrorType<CharStream>) => error);
+        return expect(_item())((error : ErrorType) => error);
     }
 
     /**
@@ -280,7 +280,7 @@ export namespace Primitives {
                             let result2 = q(result.inputstream)
                             switch (result2.tag) {
                                 case "success":
-                                    // case: both suceed
+                                    // case: both succeed
                                     return new Success<V>(result2.inputstream,f([result.result, result2.result]));
                                 default:
                                     // case: q failed
@@ -319,7 +319,7 @@ export namespace Primitives {
             };
             return bind<CharStream, CharStream>(item())(f);
         }
-        return expect(_sat(char_class))((error : ErrorType<CharStream>) => error);
+        return expect(_sat(char_class))((error : ErrorType) => error);
     }
 
     /**
@@ -332,7 +332,7 @@ export namespace Primitives {
         if (c.length != 1) {
             throw new Error("char parser takes a string of length 1 (i.e., a char)");
         }
-        return expect(sat([c]))((e : ErrorType<CharStream>) => new CharError(e.causes, e.edit, e.success, c));
+        return expect(sat([c]))((e : ErrorType) => new CharError(e.causes, e.edit, c));
     }
 
     export function lower_chars() {
@@ -349,7 +349,7 @@ export namespace Primitives {
      */
     export function letter(): IParser<CharStream> {
         let parser : IParser<CharStream> = sat(lower_chars().concat(upper_chars()));
-        return expect(parser)((e : ErrorType<CharStream>) => new LetterError(e.causes, e.edit, e.success));
+        return expect(parser)((e : ErrorType) => new LetterError(e.causes, e.edit));
     }
 
     /**
@@ -359,7 +359,7 @@ export namespace Primitives {
      */
     export function digit(): IParser<CharStream> {
         let parser : IParser<CharStream> = sat(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
-        return expect(parser)((e : ErrorType<CharStream>) => new DigitError(e.causes, e.edit, e.success));
+        return expect(parser)((e : ErrorType) => new DigitError(e.causes, e.edit));
     }
 
     /**
@@ -403,8 +403,8 @@ export namespace Primitives {
                                 break;
                             case "failure":
                                 //Get the failure object from both parsers
-                                let o1Fail = (<Failure<T>>expect(p1)((error : ErrorType<T>)  => error)(istream));
-                                let o2Fail = (<Failure<T>>expect(p1)((error : ErrorType<T>) => error)(istream));
+                                let o1Fail = (<Failure>expect(p1)((error : ErrorType)  => error)(istream));
+                                let o2Fail = (<Failure>expect(p1)((error : ErrorType) => error)(istream));
                                 
                                 //Get the edit distance from both failures
                                 let o1Edit = o1Fail.error.edit;
@@ -453,7 +453,7 @@ export namespace Primitives {
                 case "success":
                     break; //Keep parsing with next parser
                 case "failure":
-                    let e = <Failure<T>> o;
+                    let e = <Failure> o;
                     let str = istream.input;
                     curErrorPos = e.error_pos;
                     let newEdit : string = "";
@@ -505,7 +505,7 @@ export namespace Primitives {
             case "success":
                 break; //Keep parsing with next parser
             case "failure":
-                let e = <Failure<T>> o;
+                let e = <Failure> o;
                 curErrorPos = e.error_pos;
                 //let maxEdit : number = edits.length;
                 while (edits.length > 0) {
@@ -643,7 +643,7 @@ export namespace Primitives {
      */
     export function eof(): IParser<EOFMark> {
         return (istream: CharStream) => {
-            return istream.isEOF() ? new Success(istream, EOF) : new Failure(istream, istream.startpos, new EOFError());
+            return istream.isEOF() ? new Success(istream, EOF) : new Failure(istream, istream.startpos, [new EOFError()]);
         }
     }
 
@@ -698,13 +698,13 @@ export namespace Primitives {
         return (pclose: IParser<U>) => {
             return (p: IParser<V>) => {
                 let l: IParser<V> = left<V, U>(p)(expect(pclose)(
-                    (e : ErrorType<U>) => {
-                        return new BetweenRightError(e.causes, e.edit, e.success)
+                    (e : ErrorType) => {
+                        return new BetweenRightError(e.causes, e.edit)
                     }
                 ));
 
                 let r: IParser<V> = right<T, V>(expect(popen)(
-                    (e : ErrorType<T>) => new BetweenLeftError(e.causes, e.edit, e.success)
+                    (e : ErrorType) => new BetweenLeftError(e.causes, e.edit)
                 ))(l);
                 return r;
             }
@@ -822,7 +822,7 @@ export namespace Primitives {
                     }
                 }
             }
-            return new Failure(istream, istream.startpos, new StringError([],0,new Success(istream,new CharStream("")),""));
+            return new Failure(istream, istream.startpos, [new StringError([],0,"")]);
         }
     }
 }

@@ -6,24 +6,11 @@ import CharStream = CharUtil.CharStream;
 import { Primitives } from '../primitives';
 import Success = Primitives.Success;
 
-export abstract class AbstractError<T> implements ErrorType<T> {
+export abstract class AbstractError implements ErrorType {
     protected _editDistance : number = 0;
-    protected _success : Option<Success<T>> = None;
-    protected _rootCauses : Option<ErrorType<T>[]> = None;
+    protected _rootCauses : Option<ErrorType[]> = None;
 
-    get success() : Success<T> {
-        if (this._success.isDefined()) {
-            return this._success.get();
-        } else {
-            throw new Error("Success is not defined");
-        }
-    }
-
-    set success(newSuccess : Success<T>) {
-        this._success = Some(newSuccess);
-    }
-
-    get causes() : ErrorType<T>[] {
+    get causes() : ErrorType[] {
         if (this._rootCauses.isDefined()) {
             return this._rootCauses.get();
         } else {
@@ -31,13 +18,11 @@ export abstract class AbstractError<T> implements ErrorType<T> {
         }
     }
 
-    set causes(newCauses : ErrorType<T>[]) {
+    set causes(newCauses : ErrorType[]) {
         this._rootCauses = Some(newCauses)
     }
-    
-    abstract explanation() : string
-    
-    abstract expectedStr: string
+
+    abstract expectedStr: string;
     
     get edit(): number {
         return this._editDistance;
@@ -47,22 +32,6 @@ export abstract class AbstractError<T> implements ErrorType<T> {
         this._editDistance = d;
     }
 
-    get modString() : CharStream {
-        if (this._success.isDefined()) {
-            return this._success.get().inputstream;
-        } else {
-            throw new Error("Success is not defined");
-        }
-    }
-
-    convertToType<U>(f: (t: T) => U) : ErrorType<U> {
-        let uS : ErrorType<U>[] = []
-        if (this._rootCauses.isDefined()){
-            for (let item of this._rootCauses.get()){
-                let u = f(item.success.result);
-                let 
-            }
-        }
-        
-    }
+    abstract modStream : CharStream;
+    
 }

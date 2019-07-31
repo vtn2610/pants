@@ -8,7 +8,7 @@ import { AbstractError } from './AbstractError';
 import { Primitives } from '../primitives';
 import Success = Primitives.Success;
 
-export class ZeroError<T> extends AbstractError<T> {
+export class ZeroError extends AbstractError {
 
     get expectedStr() : string{
         return "";
