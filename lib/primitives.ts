@@ -602,23 +602,15 @@ export namespace Primitives {
      * @param s A string
      */
     export function str(s: string): IParser<CharStream> {
-        return (istream: CharStream) => {
-            let chars: string[] = s.split("");
-            let p = result(new CharStream(""));
-            let f = (tup: [CharStream, CharStream]) => tup[0].concat(tup[1]);
-            for (let c of chars) {
-                p = seq<CharStream, CharStream, CharStream>(p)(char(c))(f);
-            }
-            let o = p(istream);
-            switch (o.tag) {
-                case "success":
-                    break;
-                case "failure":
-                    console.log(o);
-                    return new Failure(o.error_pos, [new StringError(s)]);
-            }
-            return o;
+        let chars: string[] = s.split("");
+        let p = result(new CharStream(""));
+        let f = (tup: [CharStream, CharStream]) => tup[0].concat(tup[1]);
+        for (let c of chars) {
+            p = seq<CharStream, CharStream, CharStream>(p)(char(c))(f);
         }
+        return failAppfun(p)(f => {
+            return new Failure(f.error_pos, [new StringError(f.errors, s)]);
+        });
     }
 
     /**
@@ -804,7 +796,7 @@ export namespace Primitives {
                     }
                 }
             }
-            return new Failure(istream.startpos, [new StringError([],0,"")]);
+            return new Failure(istream.startpos, [new StringError([],"")]);
         }
     }
 }

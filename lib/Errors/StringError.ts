@@ -12,9 +12,10 @@ export class StringError extends AbstractError {
 
     private _expectedStr : string;
 
-    constructor(expectedStr : string) {
+    constructor(rootCauses : ErrorType[], expectedStr : string) {
         super();
         this._expectedStr = expectedStr;
+        this._rootCauses = Some(rootCauses);
     }
 
     get expectedStr() : string{
