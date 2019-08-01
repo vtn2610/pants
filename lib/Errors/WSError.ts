@@ -8,12 +8,11 @@ import { AbstractError } from './AbstractError';
 import { Primitives } from '../primitives';
 import Success = Primitives.Success;
 
-export class WSError extends AbstractError<CharStream> {
+export class WSError extends AbstractError {
 
-    constructor(rootCauses : ErrorType<CharStream>[], editDistance : number, success : Success<CharStream>) {
+    constructor(rootCauses : ErrorType[], editDistance : number) {
         super();
         this._editDistance = editDistance;
-        this._success = Some(success);
     }
 
     get expectedStr() : string{

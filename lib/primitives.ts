@@ -20,6 +20,11 @@ import { metriclcs, edit } from "./Edit/MetricLcs";
 import { parser } from "marked";
 
 export namespace Primitives {
+
+    function id<T>(t : T) : T{
+        return t;
+    }
+
     export class EOFMark {
         private static _instance: EOFMark;
         private constructor() { }
@@ -286,11 +291,11 @@ export namespace Primitives {
             let f = (x: CharStream) => {
                 return (char_class.indexOf(x.toString()) > -1)
                     ? result(x)
-                    : (istream: CharStream) => new Failure(istream, istream.startpos - 1, new SatError([],0,char_class));
+                    : (istream: CharStream) => new Failure(istream.startpos - 1, [new SatError(char_class)]);
             };
             return bind<CharStream, CharStream>(item())(f);
         }
-        return expect(_sat(char_class))((error : ErrorType) => error);
+        return expect(_sat(char_class))(id);
     }
 
     /**
@@ -363,35 +368,26 @@ export namespace Primitives {
     export function choice<T>(p1: IParser<T>): (p2: IParser<T>) => IParser<T> {
         return (p2: IParser<T>) => {
             return (istream: CharStream) => {
-                let o = p1(istream);
-                switch (o.tag) {
+                let o1 = p1(istream);
+                switch (o1.tag) {
                     case "success":
-                        return o;
-                    case "failure":
+                        return o1;
+                    default:
                         let o2 = p2(istream);
                         switch (o2.tag) {
                             case "success":
-                                break;
-                            case "failure":
-                                //Get the failure object from both parsers
-                                let o1Fail = (<Failure>expect(p1)((error : ErrorType)  => error)(istream));
-                                let o2Fail = (<Failure>expect(p1)((error : ErrorType) => error)(istream));
-                                
-                                //Get the edit distance from both failures
-                                let o1Edit = o1Fail.error.edit;
-                                let o2Edit = o2Fail.error.edit;
+                                return o2;
+                            default:
+                                //Get the errors arrays from both failures
+                                let o1Errors = o1.errors;
+                                let o2Errors = o2.errors;
+                                let allErrors = o1Errors.concat(o2Errors);
 
-                                if (o2Edit > o1Edit){
-                                    // p1 has the smallest edit distance
-                                    //console.log("choice: "+ o1Edit)
-                                    return new Failure(o1Fail.inputstream, o.error_pos, o.error);
-                                } else {
-                                    // p2 has the smallest edit distance
-                                    //console.log("choice2: " + o2Edit)
-                                    return new Failure(o2Fail.inputstream, o2.error_pos, o2.error);
-                                }
+                                //TODO: replace with selection function
+                                //this is an arbitrary choice, for now
+                                let errorpos = Math.min(...allErrors.map(e => e.modStream.startpos));
+                                return new Failure(errorpos, allErrors);
                         }
-                        return o2;
                 }
             };
         };
@@ -410,7 +406,6 @@ export namespace Primitives {
         if (parsers.length == 0) {
             throw new Error("Error: choices must have a non-empty array.");
         }
-
         return (parsers.length > 1)
             ? choice<T>(parsers[0])(choices<T>(...parsers.slice(1)))
             : parsers[0];
@@ -505,7 +500,7 @@ export namespace Primitives {
                         LCS++;
                         windowSize--;
                     }
-                    //if (p(new CharStream(string)).tag == "success") {break}
+                    if (p(new CharStream(string)).tag == "success") {break}
                 }        
             }
         return [LCS, new CharStream(string)];
@@ -571,16 +566,12 @@ export namespace Primitives {
      */
     export function many1<T>(p: IParser<T>) {
         return (istream: CharStream) => {
-            // let p2: IParser<T> = seq<T, T[], T[]>(p)(many<T>(p))(tup => {
-            //     let hd: T = tup["0"];
-            //     let tl: T[] = tup["1"];
-            //     tl.unshift(hd);
-            //     return tl;
-            // });
-            let p2: IParser<T> = seq<T, T[], T[]>(p)(many<T>(p))(t => []);
-
-            throw new Error();
-            // return expect())((error : ErrorType<T>)  => error);
+            return seq<T, T[], T[]>(expect(p)((e: ErrorType) => e))(many<T>(p))(tup => {
+                let hd: T = tup["0"];
+                let tl: T[] = tup["1"];
+                tl.unshift(hd);
+                return tl;
+            })(istream);
         };
     }
 
@@ -602,7 +593,7 @@ export namespace Primitives {
                     break;
                 case "failure":
                     console.log(o);
-                    return new Failure(o.error_pos, [new StringError(o.error.causes,o.error.edit,s)]);
+                    return new Failure(o.error_pos, [new StringError(s)]);
             }
             return o;
         }
@@ -721,9 +712,7 @@ export namespace Primitives {
                 case "success":
                     return new Success(o.inputstream, CharStream.concat(o.result));
                 default:
-                    let res = CharStream.concat(o.error.success.result);
-                    let e = new WSError(o.error.causes,o.error.edit, new Success(o.inputstream,res))
-                    return new Failure(o.inputstream, o.error_pos, e)
+                    return o;
             }
         }
     }
@@ -735,7 +724,7 @@ export namespace Primitives {
      */
     export function ws1(): IParser<CharStream> {
         return (istream: CharStream) => {
-            let o = expect(many1(wschars))((error: ErrorType) => new WSError(error.edit, new CharStream("")))(istream);
+            let o = expect(many1(wschars))((e: ErrorType) => new WSError(e.causes, e.edit))(istream);
             switch (o.tag) {
                 case "success":
                     return new Success(o.inputstream, CharStream.concat(o.result));
@@ -793,7 +782,7 @@ export namespace Primitives {
                     }
                 }
             }
-            return new Failure(istream, istream.startpos, [new StringError([],0,"")]);
+            return new Failure(istream.startpos, [new StringError([],0,"")]);
         }
     }
 }

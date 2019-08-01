@@ -12,9 +12,8 @@ export class StringError extends AbstractError {
 
     private _expectedStr : string;
 
-    constructor(rootCauses : ErrorType[], editDistance : number, expectedStr : string) {
+    constructor(expectedStr : string) {
         super();
-        this._editDistance = editDistance;
         this._expectedStr = expectedStr;
     }
 
