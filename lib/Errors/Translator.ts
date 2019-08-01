@@ -9,7 +9,7 @@ export class Translator {
     constructor(errorType : ErrorType) {
         this._errorType = errorType;
     }
-
+    /*
     toString() : string {
         let result : string = "Hey, you're missing ";
         let finger : ErrorType = this._errorType;
@@ -22,4 +22,5 @@ export class Translator {
 
         return result
     }
+    */
 }

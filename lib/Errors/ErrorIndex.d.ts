@@ -9,3 +9,4 @@ export { StringError } from "./StringError";
 export { BetweenLeftError } from "./BetweenLeftError";
 export { BetweenRightError } from "./BetweenRightError";
 export { BindError } from "./BindError";
+export { SeqError } from "./SeqError";

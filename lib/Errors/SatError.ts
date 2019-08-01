@@ -12,9 +12,10 @@ export class SatError extends AbstractError {
 
     private _expectedChars : string[];
     
-    constructor(expectedChars : string[]) {
+    constructor(editDistance : number, expectedChars : string[]) {
         super();
         this._expectedChars = expectedChars;
+        this._editDistance = editDistance;
     }
 
     get expectedStr() : string{

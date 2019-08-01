@@ -10,6 +10,8 @@ export class ItemError extends AbstractError{
 
     constructor() {
         super();
+        this._editDistance = 1;
+
     }
 
     get expectedStr() : string{

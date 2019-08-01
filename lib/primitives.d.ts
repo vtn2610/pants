@@ -34,17 +34,15 @@ export declare namespace Primitives {
      */
     class Failure {
         tag: "failure";
-        inputstream: CharStream;
         error_pos: number;
-        error: ErrorType;
+        errors: ErrorType[];
         /**
          * Returns an object representing a failed parse.
          *
-         * @param istream The string, unmodified, that was given to the parser.
          * @param error_pos The position of the parsing failure in istream
          * @param error The error message for the failure
          */
-        constructor(istream: CharStream, error_pos: number, error: ErrorType);
+        constructor(error_pos: number, errors: ErrorType[]);
     }
     /**
      * Union type representing a successful or failed parse.
@@ -66,6 +64,11 @@ export declare namespace Primitives {
      * @param expecting the error message.
      */
     function zero<T>(expecting: string): IParser<T>;
+    /**
+ * failParser takes a Failure and returns a parser guaranteed to fail
+ * @param fail Failure<T>
+ */
+    function failParser<T>(fail: Failure): IParser<T>;
     function minEdit(input: string, expectedStr: string): edit[];
     /**
      * expect tries to apply the given parser and returns the result of that parser
@@ -75,13 +78,12 @@ export declare namespace Primitives {
      * @param parser The parser to try
      * @param f A function that produces a new Errors given an existing Errors
      */
-    let count: number;
     function expect<T>(parser: IParser<T>): (f: EComposer) => IParser<T>;
     /**
      * item successfully consumes the first character if the input
      * string is non-empty, otherwise it fails.
      */
-    function item(): IParser<CharUtil.CharStream>;
+    function item(): (istream: CharUtil.CharStream) => Outcome<CharUtil.CharStream>;
     /**
      * bind is a curried function that takes a parser p and returns
      * a function that takes a parser f which returns the composition
@@ -89,7 +91,7 @@ export declare namespace Primitives {
      * is returned in the Failure object (i.e., bind backtracks).
      * @param p A parser
      */
-    function bind<T, U>(p: IParser<T>): (f: (t: T) => IParser<U>) => IParser<U>;
+    function bind<T, U>(p: IParser<T>): (f: (t: T) => IParser<U>) => (istream: CharUtil.CharStream) => Outcome<U>;
     function delay<T>(p: IParser<T>): () => IParser<T>;
     /**
      * seq is a curried function that takes a parser p, a parser q,
@@ -98,8 +100,14 @@ export declare namespace Primitives {
      * f takes the result of p and q, as a tuple, and returns
      * a single result.
      * @param p A parser
+     *
      */
-    function seq<T, U, V>(p: IParser<T>): (q: IParser<U>) => (f: (e: [T, U]) => V) => IParser<V>;
+    function seq<T, U, V>(p: IParser<T>): (q: IParser<U>) => (f: (e: [T, U]) => V) => (istream: CharUtil.CharStream) => Outcome<V>;
+    /**
+     * sat takes a predicate and yields a parser that consumes a
+     * single character if the character satisfies the predicate,
+     * otherwise it fails.
+     */
     function sat(char_class: string[]): IParser<CharStream>;
     /**
      * char takes a character and yields a parser that consume
@@ -163,6 +171,12 @@ export declare namespace Primitives {
      * function from FParsec.
      */
     function appfun<T, U>(p: IParser<T>): (f: (t: T) => U) => (istream: CharUtil.CharStream) => Failure | Success<U>;
+    /**
+     * failAppfun allows the user to apply a function f to
+     * the result of a parser p, assuming that p fails.
+     * @param p A parser.
+     */
+    function failAppfun<T>(p: IParser<T>): (f: (fail: Failure) => Failure) => (istream: CharUtil.CharStream) => Outcome<T>;
     /**
      * many repeatedly applies the parser p until p fails. many always
      * succeeds, even if it matches nothing or if an outcome is critical.

@@ -25,6 +25,16 @@ export namespace Primitives {
         return t;
     }
 
+    function argMin<T>(ts : T[], f : (t : T) => number) : T {
+        let element = ts[0];
+        for (let i = 1; i < ts.length; i++){
+            if (f(ts[i]) < f(element)){
+                element = ts[i];
+            }
+        }
+        return element;
+    }
+
     export class EOFMark {
         private static _instance: EOFMark;
         private constructor() { }
@@ -179,19 +189,17 @@ export namespace Primitives {
      * string is non-empty, otherwise it fails.
      */
     export function item() {
-        function _item() {
-            return (istream: CharStream) => {
-                if (istream.isEmpty()) {
-                    return new Failure(istream.startpos, [new ItemError()]);
-                } else {
-                    let remaining = istream.tail(); // remaining string;
-                    let res = istream.head(); // result of parse;
-                    return new Success(remaining, res);
-                }
+        return (istream: CharStream) => {
+            if (istream.isEmpty()) {
+                //On Failure, the edit distance must be 1, which is
+                //set inside ItemError constructor
+                return new Failure(istream.startpos, [new ItemError()]);
+            } else {
+                let remaining = istream.tail(); // remaining string;
+                let res = istream.head(); // result of parse;
+                return new Success(remaining, res);
             }
         }
-
-        return expect(_item())((error : ErrorType) => error);
     }
 
     /**
@@ -222,7 +230,6 @@ export namespace Primitives {
                             case "failure":
                                 //apply parser again with modified inputstream;
                                 const flatMap = (f : any, arr : any[]) => arr.reduce((x, y) => [...x, ...f(y)], [])
-
                                 let errors : ErrorType[] = flatMap((e : ErrorType) => {
                                     let r2 = p(e.modStream);
                                     switch (r2.tag){
@@ -258,24 +265,46 @@ export namespace Primitives {
     export function seq<T, U, V>(p: IParser<T>) {
         return (q: IParser<U>) => {
             return (f: (e: [T, U]) => V) => {
-                let firstFailed = true;
-                let p1 = bind<T, V>(p)((x) => {
-                    let p3 = bind<U, V>(q)((y) => {
+                let firstFailed = false;
+                let secondFailed = false;
+                let qDoer = (x : T) => {
+                    let q1 = bind<U, V>(q)((y) => {
                         let tup: [T, U] = [x, y];
                         return result<V>(f(tup));
                     });
-                    let p4 = failAppfun(p3)((f : Failure) => { 
-                        firstFailed = false;
-                        let e2 = new SeqError(f.errors, firstFailed)
-                        return new Failure(e2.modStream.startpos, [e2])
+                    let q2 = failAppfun(q1)((f : Failure) => { 
+                        secondFailed = true;
+                        let minError = argMin(f.errors, e => e.edit);
+                        let e2 = new SeqError(f.errors, minError.modStream, minError.edit,firstFailed,secondFailed);
+                        return new Failure(e2.modStream.startpos, [e2]);
                     });
-                    return p4;
-                });
+                    return q2;
+                };
+                let p1 = bind<T, V>(p)(qDoer);
                 let p2 = failAppfun(p1)((f : Failure) => { 
-                    if (firstFailed){
-                        let e = new SeqError(f.errors, firstFailed)
-                        return new Failure(e.modStream.startpos, [e])
+                    if (secondFailed){
+                        //TODO: arbitrary modified stream
+                        let minError = argMin(f.errors, e => e.edit);
+                        //We know this parse cannot fail because we have
+                        //modified the input stream
+                        let o2 = failAppfun(p1)(f2 => {
+                            //both p and q fail
+                            let minError2 = argMin(f2.errors, e => e.edit);
+                            firstFailed = true;
+                            let e = new SeqError(f.errors.concat(f2.errors), minError.modStream, 
+                                minError.edit + minError2.edit,firstFailed,secondFailed);
+                            return new Failure(e.modStream.startpos, [e]);
+                        })(minError.modStream);
+                        switch (o2.tag){
+                            case "success":
+                                //p failed, q succeed, so return p's failure
+                                return f;
+                            default:
+                                //both p and q fail
+                                return o2;
+                        }
                     } else {
+                        //p succeeded, q failed
                         return f;
                     }
                 });
@@ -290,15 +319,19 @@ export namespace Primitives {
      * otherwise it fails.
      */
     export function sat(char_class: string[]): IParser<CharStream> {
-        function _sat(char_class: string[]): IParser<CharStream> {
-            let f = (x: CharStream) => {
-                return (char_class.indexOf(x.toString()) > -1)
-                    ? result(x)
-                    : (istream: CharStream) => new Failure(istream.startpos - 1, [new SatError(char_class)]);
-            };
-            return bind<CharStream, CharStream>(item())(f);
-        }
-        return expect(_sat(char_class))(id);
+        let f = (x: CharStream) => {
+            return (char_class.indexOf(x.toString()) > -1)
+                ? result(x)
+                //If item succeeds but character is wrong, then the edit distance is
+                //2 due to deletion then insertion of correct character
+                : (istream: CharStream) => new Failure(istream.startpos - 1, [new SatError(2,char_class)]);
+        };
+        let b = bind<CharStream, CharStream>(item())(f);
+        //If item fails, then we insert the correct character,
+        //which is edit distance 1
+        return failAppfun(b)(f => {
+            return new Failure(f.error_pos, [new SatError(1,char_class)]);
+        });
     }
 
     /**
@@ -311,7 +344,11 @@ export namespace Primitives {
         if (c.length != 1) {
             throw new Error("char parser takes a string of length 1 (i.e., a char)");
         }
-        return expect(sat([c]))((e : ErrorType) => new CharError(e.causes, e.edit, c));
+        return failAppfun(sat([c]))(f => {
+            let e = new CharError(f.errors,f.errors[0].edit,c);
+            e.modStream = e.modStream.replaceCharAt(f.error_pos,c);
+            return new Failure(f.error_pos, [e]);
+        });
     }
 
     export function lower_chars() {
@@ -602,15 +639,16 @@ export namespace Primitives {
      * @param s A string
      */
     export function str(s: string): IParser<CharStream> {
-        let chars: string[] = s.split("");
-        let p = result(new CharStream(""));
-        let f = (tup: [CharStream, CharStream]) => tup[0].concat(tup[1]);
-        for (let c of chars) {
-            p = seq<CharStream, CharStream, CharStream>(p)(char(c))(f);
+        function _str(s :string): IParser<CharStream> {
+            let chars: string[] = s.split("");
+            let p = result(new CharStream(""));
+            let f = (tup: [CharStream, CharStream]) => tup[0].concat(tup[1]);
+            for (let c of chars) {
+                p = seq<CharStream, CharStream, CharStream>(p)(char(c))(f);
+            }
+            return p;
         }
-        return failAppfun(p)(f => {
-            return new Failure(f.error_pos, [new StringError(f.errors, s)]);
-        });
+        return expect<CharStream>(_str(s))(e => new StringError([e], s));
     }
 
     /**

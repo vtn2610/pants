@@ -1,8 +1,7 @@
 import { ErrorType } from "./ErrorType";
 import { AbstractError } from './AbstractError';
-export declare class StringError extends AbstractError {
-    private _expectedStr;
-    constructor(rootCauses: ErrorType[], expectedStr: string);
+export declare class GenericError extends AbstractError {
+    constructor(rootCauses: ErrorType[], editDistance: number);
     readonly expectedStr: string;
     explanation(): string;
     toString(): string;

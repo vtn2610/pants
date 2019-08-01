@@ -1,19 +1,9 @@
-import { Option } from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { CharUtil } from "../charstream";
-import CharStream = CharUtil.CharStream;
-export declare class CharError implements ErrorType {
+import { AbstractError } from './AbstractError';
+export declare class CharError extends AbstractError {
     private _expectedChar;
-    private _rootCause;
-    _editDistance: number;
-    _modifiedString: CharStream;
-    constructor(expectedChar: string, editDistance: number, modifiedString: CharStream);
-    cause: ErrorType;
-    getTotalEdit(): number;
-    modString: CharStream;
-    edit: number;
-    rootCause(): Option<ErrorType>;
+    constructor(rootCauses: ErrorType[], editDistance: number, expectedChar: string);
+    readonly expectedStr: string;
     explanation(): string;
-    expectedStr(): string;
     toString(): string;
 }

@@ -1,6 +1,5 @@
 import { AbstractError } from './AbstractError';
-export declare class ItemError extends AbstractError {
-    constructor();
+export declare class ZeroError extends AbstractError {
     readonly expectedStr: string;
     explanation(): string;
     toString(): string;

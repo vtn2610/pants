@@ -1,18 +1,8 @@
-import { Option } from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { CharUtil } from "../charstream";
-import CharStream = CharUtil.CharStream;
-export declare class BetweenRightError implements ErrorType {
-    private _rootCause;
-    _editDistance: number;
-    _modifiedString: CharStream;
-    constructor(rootCause: ErrorType, editDistance: number, modifiedString: CharStream);
-    getTotalEdit(): number;
-    cause: ErrorType;
-    modString: CharStream;
-    edit: number;
-    rootCause(): Option<ErrorType>;
+import { AbstractError } from './AbstractError';
+export declare class BetweenRightError extends AbstractError {
+    constructor(rootCauses: ErrorType[], editDistance: number);
+    readonly expectedStr: string;
     explanation(): string;
-    expectedStr(): string;
     toString(): string;
 }
