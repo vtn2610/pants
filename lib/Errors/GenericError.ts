@@ -13,6 +13,7 @@ export class GenericError extends AbstractError {
     constructor(rootCauses : ErrorType[], editDistance : number) {
         super();
         this._editDistance = editDistance;
+        this._rootCauses = Some(rootCauses);
     }
 
     get expectedStr() : string{

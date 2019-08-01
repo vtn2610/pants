@@ -16,6 +16,7 @@ export class CharError extends AbstractError {
         super();
         this._editDistance = editDistance;
         this._expectedChar = expectedChar;
+        this._rootCauses = Some(rootCauses);
     }
 
     get expectedStr() : string{
