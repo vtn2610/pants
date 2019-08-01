@@ -115,19 +115,6 @@ export namespace Primitives {
         }
     }
 
-    /**
-     * eresult runs the parser p, and then, regardless of
-     * Success or Failure, runs the function f on the outcome.
-     * @param p eresults 
-     */
-    export function eresult<T>(p: IParser<T>) {
-        return (f: (o: Outcome<T>) => Outcome<T>) => {
-            return (istream: CharUtil.CharStream) => {
-                return f(p(istream));
-            }
-        }
-    }
-
         /**
      * failParser takes a Failure and returns a parser guaranteed to fail
      * @param fail Failure<T>
@@ -271,12 +258,28 @@ export namespace Primitives {
     export function seq<T, U, V>(p: IParser<T>) {
         return (q: IParser<U>) => {
             return (f: (e: [T, U]) => V) => {
-                return bind<T, V>(p)((x) => {
-                    return bind<U, V>(q)((y) => {
+                let firstFailed = true;
+                let p1 = bind<T, V>(p)((x) => {
+                    let p3 = bind<U, V>(q)((y) => {
                         let tup: [T, U] = [x, y];
                         return result<V>(f(tup));
                     });
+                    let p4 = failAppfun(p3)((f : Failure) => { 
+                        firstFailed = false;
+                        let e2 = new SeqError(f.errors, firstFailed)
+                        return new Failure(e2.modStream.startpos, [e2])
+                    });
+                    return p4;
                 });
+                let p2 = failAppfun(p1)((f : Failure) => { 
+                    if (firstFailed){
+                        let e = new SeqError(f.errors, firstFailed)
+                        return new Failure(e.modStream.startpos, [e])
+                    } else {
+                        return f;
+                    }
+                });
+                return p2;
             }
         };
     }
@@ -521,6 +524,25 @@ export namespace Primitives {
                         return new Success<U>(o.inputstream, f(o.result));
                     case "failure":
                         return o;
+                }
+            }
+        }
+    }
+
+    /**
+     * failAppfun allows the user to apply a function f to
+     * the result of a parser p, assuming that p fails.
+     * @param p A parser.
+     */
+    export function failAppfun<T>(p: IParser<T>) {
+        return (f: (fail: Failure) => Failure) => {
+            return (istream: CharStream) => {
+                let o = p(istream);
+                switch (o.tag) {
+                    case "success":
+                        return o;
+                    default:
+                        return f(o);
                 }
             }
         }

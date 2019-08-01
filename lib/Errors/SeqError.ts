@@ -9,10 +9,13 @@ import { Primitives } from '../primitives';
 import Success = Primitives.Success;
 
 export class SeqError extends AbstractError {
+    protected _firstFailed = true;
 
-    constructor(rootCauses : ErrorType[], editDistance : number) {
+    constructor(rootCauses : ErrorType[], firstFailed : boolean) {
         super();
-        this._editDistance = editDistance;
+        this._firstFailed = firstFailed;
+        this._rootCauses = Some(rootCauses);
+        this._editDistance = Math.min(...rootCauses.map(e => e.edit));
     }
 
     get expectedStr() : string{
