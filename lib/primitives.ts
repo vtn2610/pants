@@ -229,14 +229,21 @@ export namespace Primitives {
                                 }
                             case "failure":
                                 //apply parser again with modified inputstream;
-                                const flatMap = (f : any, arr : any[]) => arr.reduce((x, y) => [...x, ...f(y)], [])
+                                const flatMap = (f : any, arr : any[]) => arr.reduce((x, y) => [...x, ...f(y)], []);
                                 let errors : ErrorType[] = flatMap((e : ErrorType) => {
+                                    //re-parsed with modified input, first parser must succeed
                                     let r2 = p(e.modStream);
-                                    switch (r2.tag){
-                                        case "success":
-                                            return [e];
-                                        default:
-                                            return r2.errors;
+                                    if (r2 instanceof Success){
+                                        let o2 = f(r2.result)(r2.inputstream)
+                                        switch (o2.tag){
+                                            case "success":
+                                                return e;
+                                            default:
+                                                return o2.errors;
+                                        }
+                                    } else {
+                                        //should never happen
+                                        return r2.errors;
                                     }
                                 }, r.errors);
                                 return new Failure(r.error_pos, errors);
@@ -262,7 +269,7 @@ export namespace Primitives {
      * 
      */
 
-    export function seq<T, U, V>(p: IParser<T>) {
+    export function seq2<T, U, V>(p: IParser<T>) {
         return (q: IParser<U>) => {
             return (f: (e: [T, U]) => V) => {
                 let firstFailed = false;
@@ -281,14 +288,17 @@ export namespace Primitives {
                     return q2;
                 };
                 let p1 = bind<T, V>(p)(qDoer);
+                //failAppfun only parses if p1 fails
                 let p2 = failAppfun(p1)((f : Failure) => { 
+                    //both p and q fail
                     if (secondFailed){
                         //TODO: arbitrary modified stream
                         let minError = argMin(f.errors, e => e.edit);
+
                         //We know this parse cannot fail because we have
                         //modified the input stream
                         let o2 = failAppfun(p1)(f2 => {
-                            //both p and q fail
+                            //retest with fixed input to check if the failure is due to q
                             let minError2 = argMin(f2.errors, e => e.edit);
                             firstFailed = true;
                             let e = new SeqError(f.errors.concat(f2.errors), minError.modStream, 
@@ -304,11 +314,25 @@ export namespace Primitives {
                                 return o2;
                         }
                     } else {
-                        //p succeeded, q failed
-                        return f;
+                       //p failed, q succeeded
+                       return f;
                     }
                 });
+                
                 return p2;
+            }
+        };
+    }
+
+    export function seq<T, U, V>(p: IParser<T>) {
+        return (q: IParser<U>) => {
+            return (f: (e: [T, U]) => V) => {
+                return bind<T, V>(p)((x) => {
+                    return bind<U, V>(q)((y) => {
+                        let tup: [T, U] = [x, y];
+                        return result<V>(f(tup));
+                    });
+                });
             }
         };
     }
