@@ -193,7 +193,9 @@ export namespace Primitives {
             if (istream.isEmpty()) {
                 //On Failure, the edit distance must be 1, which is
                 //set inside ItemError constructor
-                return new Failure(istream.startpos, [new ItemError()]);
+                let e = new ItemError();
+                e.modStream = istream;
+                return new Failure(istream.startpos, [e]);
             } else {
                 let remaining = istream.tail(); // remaining string;
                 let res = istream.head(); // result of parse;
@@ -364,17 +366,24 @@ export namespace Primitives {
                             }
                         default:
                             let minError2 = argMin(o1.errors, e => e.edit);
+                            // reparse p with modified input
                             let o3 = p(minError2.modStream);
                             switch (o3.tag){
-                                //p fails but q succeeds
                                 case "success":
-                                    let e = new SeqError(o1.errors, minError2.modStream, minError2.edit, true, false)
-                                    return new Failure(o1.error_pos, [e]);
-                                //both p and q fail
+                                    let o4 = q(o3.inputstream);
+                                    switch (o4.tag) {
+                                        case "success":
+                                        //p fails but q succeeds
+                                            let e = new SeqError(o1.errors, minError2.modStream, minError2.edit, true, false)
+                                            return new Failure(o1.error_pos, [e]);
+                                        default: 
+                                            let minError3 = argMin(o4.errors, e => e.edit);
+                                            let e3 = new SeqError(o4.errors, minError3.modStream, minError3.edit, true, true)
+                                            return new Failure(o4.error_pos, [e3])
+                                    }
                                 default:
-                                    let minError3 = argMin(o3.errors, e => e.edit);
-                                    let e3 = new SeqError(o3.errors, minError3.modStream, minError3.edit, true, true)
-                                    return new Failure(o3.error_pos, [e3])
+                                    throw new Error("Parser should succeed with modified input");
+                                    
                             }
                     }
                 }
