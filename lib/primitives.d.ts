@@ -91,6 +91,7 @@ export declare namespace Primitives {
      * is returned in the Failure object (i.e., bind backtracks).
      * @param p A parser
      */
+    function bind2<T, U>(p: IParser<T>): (f: (t: T) => IParser<U>) => (istream: CharUtil.CharStream) => Outcome<U>;
     function bind<T, U>(p: IParser<T>): (f: (t: T) => IParser<U>) => (istream: CharUtil.CharStream) => Outcome<U>;
     function delay<T>(p: IParser<T>): () => IParser<T>;
     /**
@@ -103,7 +104,7 @@ export declare namespace Primitives {
      *
      */
     function seq2<T, U, V>(p: IParser<T>): (q: IParser<U>) => (f: (e: [T, U]) => V) => (istream: CharUtil.CharStream) => Outcome<V>;
-    function seq<T, U, V>(p: IParser<T>): (q: IParser<U>) => (f: (e: [T, U]) => V) => (istream: CharUtil.CharStream) => Outcome<V>;
+    function seq<T, U, V>(p: IParser<T>): (q: IParser<U>) => (f: (e: [T, U]) => V) => (istream: CharUtil.CharStream) => Failure | Success<V>;
     /**
      * sat takes a predicate and yields a parser that consumes a
      * single character if the character satisfies the predicate,
@@ -193,7 +194,7 @@ export declare namespace Primitives {
      * parser state.
      * @param p The parser to try
      */
-    function many1<T>(p: IParser<T>): (istream: CharUtil.CharStream) => Outcome<T[]>;
+    function many1<T>(p: IParser<T>): (istream: CharUtil.CharStream) => Failure | Success<T[]>;
     /**
      * str yields a parser for the given string.
      * @param s A string

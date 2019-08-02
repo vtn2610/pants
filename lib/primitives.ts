@@ -209,7 +209,7 @@ export namespace Primitives {
      * is returned in the Failure object (i.e., bind backtracks).
      * @param p A parser
      */
-    export function bind<T, U>(p: IParser<T>) {
+    export function bind2<T, U>(p: IParser<T>) {
         return (f: (t: T) => IParser<U>) => {
             function _bind<T, U>(p: IParser<T>) {
                 return (f: (t: T) => IParser<U>) => {
@@ -224,7 +224,7 @@ export namespace Primitives {
                                         return o;
                                     default: // note: backtracks, returning original istream
                                     // case 2: parser 1 succeeds, 2 fails
-                                        let o2 : Outcome<U>= new Failure(o.error_pos, o.errors);
+                                        let o2 : Outcome<U> = new Failure(o.error_pos, o.errors);
                                         return o2;
                                 }
                             case "failure":
@@ -252,6 +252,27 @@ export namespace Primitives {
                 }
             }
             return _bind<T,U>(p)(f)
+        }
+    }
+
+    export function bind<T, U>(p: IParser<T>) {
+        return (f: (t: T) => IParser<U>) => {
+            return (istream: CharStream) => {
+                let r = p(istream);
+                switch (r.tag) {
+                    case "success":
+                        let o = f(r.result)(r.inputstream);
+                        switch (o.tag) {
+                            case "success":
+                                break;
+                            case "failure": // note: backtracks, returning original istream
+                                return new Failure(o.error_pos, o.errors);
+                        }
+                        return o;
+                    case "failure":
+                        return new Failure(r.error_pos, r.errors);
+                }
+            }
         }
     }
 
@@ -318,7 +339,6 @@ export namespace Primitives {
                        return f;
                     }
                 });
-                
                 return p2;
             }
         };
@@ -327,12 +347,37 @@ export namespace Primitives {
     export function seq<T, U, V>(p: IParser<T>) {
         return (q: IParser<U>) => {
             return (f: (e: [T, U]) => V) => {
-                return bind<T, V>(p)((x) => {
-                    return bind<U, V>(q)((y) => {
-                        let tup: [T, U] = [x, y];
-                        return result<V>(f(tup));
-                    });
-                });
+                return (istream: CharStream) => {
+                    let o1 = p(istream);
+                    switch (o1.tag){
+                        case "success":
+                            let o2 = q(o1.inputstream);
+                            switch(o2.tag){
+                                //p and q succeed
+                                case "success":
+                                    return new Success<V>(o2.inputstream, f([o1.result, o2.result]));
+                                //p succeeds and q fails
+                                default:
+                                    let minError = argMin(o2.errors, e => e.edit);
+                                    let e = new SeqError(o2.errors, minError.modStream, minError.edit, false, true)
+                                    return new Failure(o2.error_pos, [e]);
+                            }
+                        default:
+                            let minError2 = argMin(o1.errors, e => e.edit);
+                            let o3 = p(minError2.modStream);
+                            switch (o3.tag){
+                                //p fails but q succeeds
+                                case "success":
+                                    let e = new SeqError(o1.errors, minError2.modStream, minError2.edit, true, false)
+                                    return new Failure(o1.error_pos, [e]);
+                                //both p and q fail
+                                default:
+                                    let minError3 = argMin(o3.errors, e => e.edit);
+                                    let e3 = new SeqError(o3.errors, minError3.modStream, minError3.edit, true, true)
+                                    return new Failure(o3.error_pos, [e3])
+                            }
+                    }
+                }
             }
         };
     }
@@ -348,13 +393,19 @@ export namespace Primitives {
                 ? result(x)
                 //If item succeeds but character is wrong, then the edit distance is
                 //2 due to deletion then insertion of correct character
-                : (istream: CharStream) => new Failure(istream.startpos - 1, [new SatError(2,char_class)]);
+                : (istream: CharStream) => {
+                    //let e = new SatError(1,char_class);
+                    //e.modStream = f.errors[0].modStream;
+                    return new Failure(istream.startpos - 1, [new SatError(2,char_class)])
+                };
         };
         let b = bind<CharStream, CharStream>(item())(f);
         //If item fails, then we insert the correct character,
         //which is edit distance 1
         return failAppfun(b)(f => {
-            return new Failure(f.error_pos, [new SatError(1,char_class)]);
+            let e = new SatError(1,char_class);
+            e.modStream = f.errors[0].modStream;
+            return new Failure(f.error_pos, [e]);
         });
     }
 
@@ -370,7 +421,7 @@ export namespace Primitives {
         }
         return failAppfun(sat([c]))(f => {
             let e = new CharError(f.errors,f.errors[0].edit,c);
-            e.modStream = e.modStream.replaceCharAt(f.error_pos,c);
+            e.modStream = f.errors[0].modStream.replaceCharAt(f.error_pos,c);
             return new Failure(f.error_pos, [e]);
         });
     }
