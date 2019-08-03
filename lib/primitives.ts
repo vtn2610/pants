@@ -374,7 +374,7 @@ export namespace Primitives {
                                     switch (o4.tag) {
                                         case "success":
                                         //p fails but q succeeds
-                                            let e = new SeqError(o1.errors, minError2.modStream, minError2.edit, true, false)
+                                            let e = new SeqError(o1.errors, o3.inputstream, minError2.edit, true, false)
                                             return new Failure(o1.error_pos, [e]);
                                         default: 
                                             let minError3 = argMin(o4.errors, e => e.edit);
@@ -382,7 +382,8 @@ export namespace Primitives {
                                             return new Failure(o4.error_pos, [e3])
                                     }
                                 default:
-                                    throw new Error("Parser should succeed with modified input");
+                                    return new Failure(o1.error_pos,o1.errors);
+                                    //throw new Error("Parser should succeed with modified input");
                                     
                             }
                     }
@@ -403,9 +404,10 @@ export namespace Primitives {
                 //If item succeeds but character is wrong, then the edit distance is
                 //2 due to deletion then insertion of correct character
                 : (istream: CharStream) => {
-                    //let e = new SatError(1,char_class);
-                    //e.modStream = f.errors[0].modStream;
-                    return new Failure(istream.startpos - 1, [new SatError(2,char_class)])
+                    let e = new SatError(2,char_class);
+                    let istream2 = new CharStream(istream.input, istream.startpos-1)
+                    e.modStream = istream2;
+                    return new Failure(istream2.startpos, [e])
                 };
         };
         let b = bind<CharStream, CharStream>(item())(f);
