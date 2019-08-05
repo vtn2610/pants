@@ -83,7 +83,7 @@ export declare namespace Primitives {
      * item successfully consumes the first character if the input
      * string is non-empty, otherwise it fails.
      */
-    function item(): (istream: CharUtil.CharStream) => Outcome<CharUtil.CharStream>;
+    function item(): (istream: CharUtil.CharStream) => Failure | Success<CharUtil.CharStream>;
     /**
      * bind is a curried function that takes a parser p and returns
      * a function that takes a parser f which returns the composition
