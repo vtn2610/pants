@@ -194,7 +194,7 @@ export namespace Primitives {
                 //On Failure, the edit distance must be 1, which is
                 //set inside ItemError constructor
                 let e = new ItemError();
-                e.modStream = istream;
+                e.modStream = new CharStream(istream.input + " ", istream.startpos + 1);
                 return new Failure(istream.startpos, [e]);
             } else {
                 let remaining = istream.tail(); // remaining string;
@@ -421,9 +421,10 @@ export namespace Primitives {
                 //which is edit distance 1
                 case "failure":
                     let e = new SatError(1,char_class);
-                    e.modStream = new CharStream(istream.input + " ", istream.startpos+1);
-                    console.log(istream)
+                    let minError = argMin(o1.errors, e => e.edit);
+                    e.modStream = minError.modStream;
                     return new Failure(o1.error_pos, [e])
+
                 default:
                     let f = (x: CharStream) => {
                         return (char_class.indexOf(x.toString()) > -1)
