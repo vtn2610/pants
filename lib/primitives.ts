@@ -8,8 +8,8 @@ import { DigitError } from "./Errors/DigitError";
 import { LetterError } from "./Errors/LetterError";
 import { WSError } from "./Errors/WSError";
 import { StringError } from "./Errors/StringError";
-import { BetweenLeftError } from "./Errors/BetweenLeftError";
-import { BetweenRightError } from "./Errors/BetweenRightError";
+import { LeftError } from "./Errors/LeftError";
+import { RightError } from "./Errors/RightError";
 import { BindError } from "./Errors/BindError";
 import { ZeroError } from "./Errors/ZeroError";
 import { SeqError } from "./Errors/SeqError";
@@ -390,29 +390,6 @@ export namespace Primitives {
      * single character if the character satisfies the predicate,
      * otherwise it fails.
      */
-    // export function sat2(char_class: string[]): IParser<CharStream> {
-    //     let f = (x: CharStream) => {
-    //         return (char_class.indexOf(x.toString()) > -1)
-    //             ? result(x)
-    //             //If item succeeds but character is wrong, then the edit distance is
-    //             //2 due to deletion then insertion of correct character
-    //             : (istream: CharStream) => {
-    //                 let e = new SatError(2,char_class);
-    //                 let istream2 = new CharStream(istream.input, istream.startpos-1)
-    //                 e.modStream = istream2;
-    //                 return new Failure(istream2.startpos, [e])
-    //             };
-    //     };
-    //     let b = bind<CharStream, CharStream>(item())(f);
-    //     //If item fails, then we insert the correct character,
-    //     //which is edit distance 1
-    //     return failAppfun(b)(f => {
-    //         let e = new SatError(1,char_class);
-    //         e.modStream = f.errors[0].modStream;
-    //         return new Failure(f.error_pos, [e])
-    //     });
-    // }
-
     export function sat(char_class: string[]): IParser<CharStream> {
         return (istream: CharStream) => {
             let o1 = item()(istream);
@@ -476,7 +453,11 @@ export namespace Primitives {
      */
     export function letter(): IParser<CharStream> {
         let parser : IParser<CharStream> = sat(lower_chars().concat(upper_chars()));
-        return expect(parser)((e : ErrorType) => new LetterError(e.causes, e.edit));
+        return failAppfun(parser)((f : Failure) => {
+            let e = new LetterError(f.errors, f.errors[0].edit)
+            e.modStream = f.errors[0].modStream.replaceCharAt(f.error_pos, e.expectedStr);
+            return new Failure(f.error_pos, [e])
+        });
     }
 
     /**
@@ -486,7 +467,11 @@ export namespace Primitives {
      */
     export function digit(): IParser<CharStream> {
         let parser : IParser<CharStream> = sat(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
-        return expect(parser)((e : ErrorType) => new DigitError(e.causes, e.edit));
+        return failAppfun(parser)((f : Failure) => {
+            let e = new DigitError(f.errors, f.errors[0].edit)
+            e.modStream = f.errors[0].modStream.replaceCharAt(f.error_pos, e.expectedStr);
+            return new Failure(f.error_pos, [e])
+        });
     }
 
     /**
@@ -736,7 +721,7 @@ export namespace Primitives {
      */
     export function many1<T>(p: IParser<T>) {
         return (istream: CharStream) => {
-            return seq<T, T[], T[]>(expect(p)((e: ErrorType) => e))(many<T>(p))(tup => {
+            return seq<T, T[], T[]>(p)(many<T>(p))(tup => {
                 let hd: T = tup["0"];
                 let tl: T[] = tup["1"];
                 tl.unshift(hd);
@@ -750,16 +735,25 @@ export namespace Primitives {
      * @param s A string
      */
     export function str(s: string): IParser<CharStream> {
-        function _str(s :string): IParser<CharStream> {
+        return (istream : CharStream) => {
             let chars: string[] = s.split("");
             let p = result(new CharStream(""));
             let f = (tup: [CharStream, CharStream]) => tup[0].concat(tup[1]);
             for (let c of chars) {
                 p = seq<CharStream, CharStream, CharStream>(p)(char(c))(f);
             }
-            return p;
+            let outcome = p(istream);
+            switch (outcome.tag) {
+                case "success":
+                    return outcome;
+                default:
+                    let e = new StringError(outcome.errors, s);
+                    let minError = argMin(outcome.errors, e => e.edit);
+                    e.edit = minError.edit;
+                    e.modStream = minError.modStream;
+                    return new Failure(istream.startpos, [e]);
+            }
         }
-        return expect<CharStream>(_str(s))(e => new StringError([e], s));
     }
 
     /**
@@ -793,9 +787,11 @@ export namespace Primitives {
      */
     export function left<T, U>(p: IParser<T>) {
         return (q: IParser<U>) => {
-            return (istream: CharStream) => {
-                return bind<T, T>(p)((t: T) => fresult<U, T>(q)(t))(istream);
-            }
+            return failAppfun(seq<T,U,T>(p)(q)(tup => tup[0]))(f => {
+                let minError = argMin(f.errors, e => e.edit);
+                let e = new LeftError(minError.causes, minError.modStream, minError.edit);
+                return new Failure(f.error_pos, [e])  
+            })
         }
     }
 
@@ -807,9 +803,11 @@ export namespace Primitives {
      */
     export function right<T, U>(p: IParser<T>) {
         return (q: IParser<U>) => {
-            return (istream: CharStream) => {
-                return bind<T, U>(p)(_ => q)(istream);
-            }
+            return failAppfun(seq<T,U,U>(p)(q)(tup => tup[1]))(f => {
+                let minError = argMin(f.errors, e => e.edit);
+                let e = new RightError(minError.causes, minError.modStream, minError.edit);
+                return new Failure(f.error_pos, [e])  
+            })
         }
     }
 
@@ -822,15 +820,8 @@ export namespace Primitives {
     export function between<T, U, V>(popen: IParser<T>): (pclose: IParser<U>) => (p: IParser<V>) => IParser<V> {
         return (pclose: IParser<U>) => {
             return (p: IParser<V>) => {
-                let l: IParser<V> = left<V, U>(p)(expect(pclose)(
-                    (e : ErrorType) => {
-                        return new BetweenRightError(e.causes, e.edit)
-                    }
-                ));
-
-                let r: IParser<V> = right<T, V>(expect(popen)(
-                    (e : ErrorType) => new BetweenLeftError(e.causes, e.edit)
-                ))(l);
+                let l: IParser<V> = left<V, U>(p)(pclose);
+                let r: IParser<V> = right<T, V>(popen)(l);
                 return r;
             }
         }
@@ -887,12 +878,14 @@ export namespace Primitives {
      */
     export function ws1(): IParser<CharStream> {
         return (istream: CharStream) => {
-            let o = expect(many1(wschars))((e: ErrorType) => new WSError(e.causes, e.edit))(istream);
+            let o = many1(wschars)(istream);
             switch (o.tag) {
                 case "success":
                     return new Success(o.inputstream, CharStream.concat(o.result));
                 case "failure":
-                    return o;
+                    let e = new WSError(o.errors, o.errors[0].edit);
+                    e.modStream = e.causes[0].modStream;
+                    return new Failure(o.error_pos, [e]);
             }
         }
     }

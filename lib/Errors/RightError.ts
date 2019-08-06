@@ -8,24 +8,13 @@ import { AbstractError } from './AbstractError';
 import { Primitives } from '../primitives';
 import Success = Primitives.Success;
 
-export class SeqError extends AbstractError {
-    protected _firstFailed = true;
-    protected _secondFailed = true;
+export class RightError extends AbstractError {
 
-    constructor(rootCauses : ErrorType[], modStream : CharStream, editDistance : number, firstFailed : boolean, secondFailed : boolean) {
+    constructor(rootCauses : ErrorType[], modStream : CharStream, editDistance : number) {
         super();
-        this._firstFailed = firstFailed;
-        this._secondFailed = secondFailed;
         this._rootCauses = Some(rootCauses);
         this._editDistance = editDistance;
         this._modStream = modStream;
-    }
-
-    get firstFailed(){
-        return this._firstFailed;
-    }
-    get secondFailed(){
-        return this._secondFailed;
     }
 
     get expectedStr() : string{
@@ -37,10 +26,10 @@ export class SeqError extends AbstractError {
     } 
     
     explanation() {
-        return "sequence";
+        return "right";
     }
 
     toString() : string {
-        return "SeqError"; 
+        return "RightError"; 
     }
 }
