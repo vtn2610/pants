@@ -75,6 +75,8 @@ export declare namespace CharUtil {
          * @param char
          */
         replaceCharAt(index: number, char: string): CharStream;
+        insertCharAt(index: number, char: string): CharStream;
+        deleteCharAt(index: number, char: string): CharStream;
         /**
          * Concatenate an array of CharStream objects into a single
          * CharStream object.

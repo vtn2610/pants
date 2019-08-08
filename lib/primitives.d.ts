@@ -1,7 +1,7 @@
 import { CharUtil } from "./charstream";
 import CharStream = CharUtil.CharStream;
 import { ErrorType } from "./Errors/ErrorType";
-import { edit } from "./Edit/MetricLcs";
+import { edit } from "./Edit/Levenshtein";
 export declare namespace Primitives {
     class EOFMark {
         private static _instance;
@@ -64,11 +64,6 @@ export declare namespace Primitives {
      * @param expecting the error message.
      */
     function zero<T>(expecting: string): IParser<T>;
-    /**
- * failParser takes a Failure and returns a parser guaranteed to fail
- * @param fail Failure<T>
- */
-    function failParser<T>(fail: Failure): IParser<T>;
     function minEdit(input: string, expectedStr: string): edit[];
     /**
      * expect tries to apply the given parser and returns the result of that parser
@@ -78,7 +73,6 @@ export declare namespace Primitives {
      * @param parser The parser to try
      * @param f A function that produces a new Errors given an existing Errors
      */
-    function expect<T>(parser: IParser<T>): (f: EComposer) => IParser<T>;
     /**
      * item successfully consumes the first character if the input
      * string is non-empty, otherwise it fails.
@@ -91,7 +85,6 @@ export declare namespace Primitives {
      * is returned in the Failure object (i.e., bind backtracks).
      * @param p A parser
      */
-    function bind2<T, U>(p: IParser<T>): (f: (t: T) => IParser<U>) => (istream: CharUtil.CharStream) => Outcome<U>;
     function bind<T, U>(p: IParser<T>): (f: (t: T) => IParser<U>) => (istream: CharUtil.CharStream) => Outcome<U>;
     function delay<T>(p: IParser<T>): () => IParser<T>;
     /**
@@ -103,7 +96,6 @@ export declare namespace Primitives {
      * @param p A parser
      *
      */
-    function seq2<T, U, V>(p: IParser<T>): (q: IParser<U>) => (f: (e: [T, U]) => V) => (istream: CharUtil.CharStream) => Outcome<V>;
     function seq<T, U, V>(p: IParser<T>): (q: IParser<U>) => (f: (e: [T, U]) => V) => (istream: CharUtil.CharStream) => Failure | Success<V>;
     /**
      * sat takes a predicate and yields a parser that consumes a
@@ -117,7 +109,7 @@ export declare namespace Primitives {
      * character in the input stream is c, otherwise it fails.
      * @param c
      */
-    function char(c: string): IParser<CharStream>;
+    function char(c: string, edit?: edit): IParser<CharStream>;
     function lower_chars(): string[];
     function upper_chars(): string[];
     /**
@@ -163,9 +155,6 @@ export declare namespace Primitives {
      * @param parsers An array of parsers to try
      */
     function choices<T>(...parsers: IParser<T>[]): IParser<T>;
-    function editParse2<T>(p: IParser<T>, istream: CharStream, LCS: number, windowSize: number, orgErrorPos: number, curErrorPos: number, edits: edit[]): [number, CharStream];
-    let editParsecount: number;
-    function editParse<T>(p: IParser<T>, istream: CharStream, LCS: number, windowSize: number, orgErrorPos: number, curErrorPos: number, edits: edit[]): [number, CharStream];
     /**
      * appfun allows the user to apply a function f to
      * the result of a parser p, assuming that p is successful.

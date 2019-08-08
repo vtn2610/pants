@@ -42,7 +42,6 @@ export function levenshtein(s1: string, s2: string): edit[] {
             )
         } 
     }
-    console.log(c[s1_length][s2_length]);
     return diff(c, x, y, s1_length, s2_length, Array<edit>());
 }
 
@@ -79,7 +78,3 @@ function diff(c: number[][], s1: string[], s2: string[], i: number, j: number, e
     }
     return edits;
   }
-
-// let c = "";
-// let d = "singe";
-// console.log(levenshtein(c,d))

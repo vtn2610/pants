@@ -16,7 +16,7 @@ import { SeqError } from "./Errors/SeqError";
 import { EOFError } from "./Errors/EOFError";
 import { GenericError } from "./Errors/GenericError";
 import { None, Some, Option } from "space-lift";
-import { metriclcs, edit } from "./Edit/MetricLcs";
+import { levenshtein, edit } from "./Edit/Levenshtein";
 import { parser } from "marked";
 
 export namespace Primitives {
@@ -125,18 +125,8 @@ export namespace Primitives {
         }
     }
 
-        /**
-     * failParser takes a Failure and returns a parser guaranteed to fail
-     * @param fail Failure<T>
-     */
-    export function failParser<T>(fail: Failure): IParser<T> {
-        return (istream: CharStream) => {
-            return fail;
-        }
-    }
-
     export function minEdit(input : string, expectedStr : string) {
-        return metriclcs(input, expectedStr);
+        return levenshtein(input, expectedStr);
     }
 
     /**
@@ -147,42 +137,42 @@ export namespace Primitives {
      * @param parser The parser to try
      * @param f A function that produces a new Errors given an existing Errors
      */
-    export function expect<T>(parser: IParser<T>) : (f: EComposer) => IParser<T> {
-        return (f: EComposer) => {
-            return (istream: CharStream) => {
-                let outcome: Outcome<T> = parser(istream);
-                switch (outcome.tag) {
-                    case "success":
-                        return outcome;
-                    case "failure":
-                        let fail: Failure = outcome;
-                        let errors : ErrorType[] = fail.errors;
+    // export function expect<T>(parser: IParser<T>) : (f: EComposer) => IParser<T> {
+    //     return (f: EComposer) => {
+    //         return (istream: CharStream) => {
+    //             let outcome: Outcome<T> = parser(istream);
+    //             switch (outcome.tag) {
+    //                 case "success":
+    //                     return outcome;
+    //                 case "failure":
+    //                     let fail: Failure = outcome;
+    //                     let errors : ErrorType[] = fail.errors;
 
-                        let newErrors : ErrorType[] = errors.map(e => {
-                            //computes the size of the substring required for LCS
-                            let windowSize = e.expectedStr.length;
+    //                     let newErrors : ErrorType[] = errors.map(e => {
+    //                         //computes the size of the substring required for LCS
+    //                         let windowSize = e.expectedStr.length;
 
-                            //the actual substring inside window
-                            let inputBound = istream.input.substring(fail.error_pos, fail.error_pos + windowSize);
+    //                         //the actual substring inside window
+    //                         let inputBound = istream.input.substring(fail.error_pos, fail.error_pos + windowSize);
 
-                            //the set of edits returned via LCS
-                            let editsSet = minEdit(inputBound, e.expectedStr);
+    //                         //the set of edits returned via LCS
+    //                         let editsSet = minEdit(inputBound, e.expectedStr);
 
-                            //the corrected stream and edit distance after applying edits within window
-                            let edits : [number,CharStream] = editParse(parser, istream, e.edit, windowSize, fail.error_pos, fail.error_pos, editsSet);
+    //                         //the corrected stream and edit distance after applying edits within window
+    //                         let edits : [number,CharStream] = editParse(parser, istream, e.edit, windowSize, fail.error_pos, fail.error_pos, editsSet);
 
-                            //set edit distance and modified stream in error object, and advance start pos
-                            e.edit = edits[0];
-                            e.modStream = edits[1].seek(windowSize);
+    //                         //set edit distance and modified stream in error object, and advance start pos
+    //                         e.edit = edits[0];
+    //                         e.modStream = edits[1].seek(windowSize);
                             
-                            //apply error composition
-                            return f(e);
-                        });
-                        return new Failure(istream.startpos, newErrors);
-                }
-            }
-        };
-    }
+    //                         //apply error composition
+    //                         return f(e);
+    //                     });
+    //                     return new Failure(istream.startpos, newErrors);
+    //             }
+    //         }
+    //     };
+    // }
 
     /**
      * item successfully consumes the first character if the input
@@ -211,52 +201,6 @@ export namespace Primitives {
      * is returned in the Failure object (i.e., bind backtracks).
      * @param p A parser
      */
-    export function bind2<T, U>(p: IParser<T>) {
-        return (f: (t: T) => IParser<U>) => {
-            function _bind<T, U>(p: IParser<T>) {
-                return (f: (t: T) => IParser<U>) => {
-                    return (istream: CharStream) => {
-                        let r = p(istream);
-                        switch (r.tag) {
-                            case "success":
-                                let o: Outcome<U> = f(r.result)(r.inputstream);
-                                switch (o.tag) {
-                                    case "success":
-                                    // case 1: both parsers succeed
-                                        return o;
-                                    default: // note: backtracks, returning original istream
-                                    // case 2: parser 1 succeeds, 2 fails
-                                        let o2 : Outcome<U> = new Failure(o.error_pos, o.errors);
-                                        return o2;
-                                }
-                            case "failure":
-                                //apply parser again with modified inputstream;
-                                const flatMap = (f : any, arr : any[]) => arr.reduce((x, y) => [...x, ...f(y)], []);
-                                let errors : ErrorType[] = flatMap((e : ErrorType) => {
-                                    //re-parsed with modified input, first parser must succeed
-                                    let r2 = p(e.modStream);
-                                    if (r2 instanceof Success){
-                                        let o2 = f(r2.result)(r2.inputstream)
-                                        switch (o2.tag){
-                                            case "success":
-                                                return e;
-                                            default:
-                                                return o2.errors;
-                                        }
-                                    } else {
-                                        //should never happen
-                                        return r2.errors;
-                                    }
-                                }, r.errors);
-                                return new Failure(r.error_pos, errors);
-                        }
-                    }
-                }
-            }
-            return _bind<T,U>(p)(f)
-        }
-    }
-
     export function bind<T, U>(p: IParser<T>) {
         return (f: (t: T) => IParser<U>) => {
             return (istream: CharStream) => {
@@ -291,60 +235,6 @@ export namespace Primitives {
      * @param p A parser
      * 
      */
-
-    export function seq2<T, U, V>(p: IParser<T>) {
-        return (q: IParser<U>) => {
-            return (f: (e: [T, U]) => V) => {
-                let firstFailed = false;
-                let secondFailed = false;
-                let qDoer = (x : T) => {
-                    let q1 = bind<U, V>(q)((y) => {
-                        let tup: [T, U] = [x, y];
-                        return result<V>(f(tup));
-                    });
-                    let q2 = failAppfun(q1)((f : Failure) => { 
-                        secondFailed = true;
-                        let minError = argMin(f.errors, e => e.edit);
-                        let e2 = new SeqError(f.errors, minError.modStream, minError.edit,firstFailed,secondFailed);
-                        return new Failure(e2.modStream.startpos, [e2]);
-                    });
-                    return q2;
-                };
-                let p1 = bind<T, V>(p)(qDoer);
-                //failAppfun only parses if p1 fails
-                let p2 = failAppfun(p1)((f : Failure) => { 
-                    //both p and q fail
-                    if (secondFailed){
-                        //TODO: arbitrary modified stream
-                        let minError = argMin(f.errors, e => e.edit);
-
-                        //We know this parse cannot fail because we have
-                        //modified the input stream
-                        let o2 = failAppfun(p1)(f2 => {
-                            //retest with fixed input to check if the failure is due to q
-                            let minError2 = argMin(f2.errors, e => e.edit);
-                            firstFailed = true;
-                            let e = new SeqError(f.errors.concat(f2.errors), minError.modStream, 
-                                minError.edit + minError2.edit,firstFailed,secondFailed);
-                            return new Failure(e.modStream.startpos, [e]);
-                        })(minError.modStream);
-                        switch (o2.tag){
-                            case "success":
-                                //p failed, q succeed, so return p's failure
-                                return f;
-                            default:
-                                //both p and q fail
-                                return o2;
-                        }
-                    } else {
-                       //p failed, q succeeded
-                       return f;
-                    }
-                });
-                return p2;
-            }
-        };
-    }
 
     export function seq<T, U, V>(p: IParser<T>) {
         return (q: IParser<U>) => {
@@ -427,14 +317,23 @@ export namespace Primitives {
      * character in the input stream is c, otherwise it fails.
      * @param c
      */
-    export function char(c: string): IParser<CharStream> {
+    export function char(c: string, edit : edit = {sign: 2, char : c, pos : 0}): IParser<CharStream> {
         if (c.length != 1) {
             throw new Error("char parser takes a string of length 1 (i.e., a char)");
         }
         return failAppfun(sat([c]))(f => {
-            let e = new CharError(f.errors,f.errors[0].edit,c);
-            //console.log(f);
-            e.modStream = f.errors[0].modStream.replaceCharAt(f.error_pos,c);
+            let e = new CharError(f.errors, 0 ,c);
+            let minError = argMin(f.errors, e => e.edit);
+            if (edit.sign == 0) { // delete case
+                e.modStream = minError.modStream.deleteCharAt(f.error_pos, c);
+                e.edit = 1;
+            } else if (edit.sign == 1) { // insert case
+                e.modStream = minError.modStream.insertCharAt(f.error_pos, c);
+                e.edit = 1;
+            } else if (edit.sign == 2) { // replace case
+                e.modStream = minError.modStream.replaceCharAt(f.error_pos, c);
+                e.edit = 2;
+            }
             return new Failure(f.error_pos, [e]);
         });
     }
@@ -547,100 +446,6 @@ export namespace Primitives {
             : parsers[0];
         
     }
-    //performs the force parse, and returns ultimately the LCS length
-    export function editParse2<T>(p: IParser<T>, istream : CharStream, LCS: number, windowSize : number, orgErrorPos : number, curErrorPos : number, edits: edit[]): [number,CharStream] {
-        if (curErrorPos - orgErrorPos < windowSize) {
-            let o = p(istream);
-            switch (o.tag) {
-                case "success":
-                    break; //Keep parsing with next parser
-                case "failure":
-                    let e = <Failure> o;
-                    let str = istream.input;
-                    curErrorPos = e.error_pos;
-                    let newEdit : string = "";
-                    console.log(edits);
-                    if (edits.length !== 0) {
-                        let curEdit : edit | undefined = edits.shift();
-                        // case of insertion
-                        if (curEdit !== undefined && curEdit.sign === true) { 
-                            if (edits[0] !== undefined && edits[0].pos == curEdit.pos && edits[0].sign === false) {
-                                // case of replacement
-                                let replace = edits.shift();
-                                console.log(curEdit.char + " changed letter");
-                                if (replace !== undefined) str = str.substring(0, curErrorPos + curEdit.pos) + curEdit.char + str.substring(curErrorPos + curEdit.pos + 1);
-                                LCS += 2;
-                            } else {
-
-                            str = str.substring(0, curErrorPos + curEdit.pos) + curEdit.char + str.substring(curErrorPos + curEdit.pos);
-                            for (let item of edits) {
-                                item.pos++;
-                            }
-                            LCS++;
-                        }
-
-                        // case of deletion
-                        } else if (curEdit !== undefined && curEdit.sign === false) {
-                            str = str.substring(0, curErrorPos + curEdit.pos) + str.substring(curErrorPos + curEdit.pos + 1);
-                            for (let item of edits) {
-                                item.pos--;
-                            }
-                            LCS++;
-                        }
-                    }
-                    
-                    return editParse(p, new CharStream(str), LCS, newEdit.length, orgErrorPos, curErrorPos, edits);
-                    //calculate LCS, replace istream, and call LCSParse on same parser
-            }
-        } 
-        return [LCS, istream];
-    }
-
-    export let editParsecount = 0;
-
-    //performs the force parse, and returns ultimately the LCS length
-    export function editParse<T>(p: IParser<T>, istream : CharStream, LCS: number, windowSize : number, orgErrorPos : number, curErrorPos : number, edits: edit[]): [number,CharStream] {
-        editParsecount++;
-        let o = p(istream);
-        let string = istream.input;
-        switch (o.tag) {
-            case "success":
-                break; //Keep parsing with next parser
-            case "failure":
-                let e = <Failure> o;
-                curErrorPos = e.error_pos;
-                //let maxEdit : number = edits.length;
-                while (edits.length > 0) {
-                    let curEdit : edit | undefined = edits.shift();
-                    // case of insertion
-                    if (curEdit !== undefined && curEdit.sign === true) { 
-                        if (edits[0] !== undefined && edits[0].pos == curEdit.pos && edits[0].sign === false) {
-                            // case of replacement
-                            let replace = edits.shift();
-                            if (replace !== undefined) string = string.substring(0, curErrorPos + curEdit.pos) + curEdit.char + string.substring(curErrorPos + curEdit.pos + 1);
-                                LCS += 2;
-                        } else {
-                            string = string.substring(0, curErrorPos + curEdit.pos) + curEdit.char + string.substring(curErrorPos + curEdit.pos);
-                            for (let item of edits) {
-                                item.pos++;
-                            }
-                            LCS++;
-                            windowSize++;
-                        }
-                    // case of deletion
-                    } else if (curEdit !== undefined && curEdit.sign === false) {
-                        string = string.substring(0, curErrorPos + curEdit.pos) + string.substring(curErrorPos + curEdit.pos + 1);
-                        for (let item of edits) {
-                            item.pos--;
-                        }
-                        LCS++;
-                        windowSize--;
-                    }
-                    if (p(new CharStream(string)).tag == "success") {break}
-                }        
-            }
-        return [LCS, new CharStream(string)];
-    } 
         
     /**
      * appfun allows the user to apply a function f to
@@ -736,11 +541,29 @@ export namespace Primitives {
      */
     export function str(s: string): IParser<CharStream> {
         return (istream : CharStream) => {
-            let chars: string[] = s.split("");
+            let input = istream.input.substr(istream.startpos, istream.startpos + s.length);
+            let window = s.length;
+            let edits = minEdit(input, s);
+            console.log(edits);
             let p = result(new CharStream(""));
             let f = (tup: [CharStream, CharStream]) => tup[0].concat(tup[1]);
-            for (let c of chars) {
-                p = seq<CharStream, CharStream, CharStream>(p)(char(c))(f);
+            let edit : undefined | edit = edits.shift();
+            for (let i = 0; i < window; i++) {
+                if (edit != undefined && i == edit.pos) { //edits to be fixed <= windowSize
+                    p = seq<CharStream, CharStream, CharStream>(p)(char(s[i], edit))(f);
+                    if (edit.sign == 0) { //delete
+                        for (let edit of edits) {
+                            edit.pos--;
+                        }
+                    } else if (edit.sign == 1) { //insert
+                        for (let edit of edits) {
+                            edit.pos++;
+                        }
+                    }
+                    edit = edits.shift();
+                } else {
+                    p = seq<CharStream, CharStream, CharStream>(p)(char(s[i]))(f);
+                }
             }
             let outcome = p(istream);
             switch (outcome.tag) {
@@ -861,7 +684,7 @@ export namespace Primitives {
      */
     export function ws(): IParser<CharStream> {
         return (istream: CharStream) => {
-            let o = many(wschars)(istream);
+            let o = many(char(" "))(istream);
             switch (o.tag) {
                 case "success":
                     return new Success(o.inputstream, CharStream.concat(o.result));
@@ -878,13 +701,14 @@ export namespace Primitives {
      */
     export function ws1(): IParser<CharStream> {
         return (istream: CharStream) => {
-            let o = many1(wschars)(istream);
+            let o = many1(char(" "))(istream);
             switch (o.tag) {
                 case "success":
                     return new Success(o.inputstream, CharStream.concat(o.result));
                 case "failure":
-                    let e = new WSError(o.errors, o.errors[0].edit);
-                    e.modStream = e.causes[0].modStream;
+                    let minError = argMin(o.errors, e => e.edit); 
+                    let e = new WSError(o.errors, minError.edit);
+                    e.modStream = minError.modStream.replaceCharAt(o.error_pos, e.expectedStr);
                     return new Failure(o.error_pos, [e]);
             }
         }
