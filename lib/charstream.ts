@@ -162,9 +162,28 @@ export namespace CharUtil {
             //     throw new Error("Index out of Bound");
             // }
             const s = this.input.substr(0, index) + char + this.input.substr(index + 1);
+            return new CharStream(s, this.startpos, this.endpos, this.hasEOF);
+        }
+
+        public insertCharAt(index: number, char: string) : CharStream {
+            if (char.length != 1){
+                throw new Error("Char must be a character");
+            }
+            const s = this.input.substr(0, index) + char + this.input.substr(index);
             return new CharStream(s, this.startpos, this.endpos + 1, this.hasEOF);
         }
 
+        public deleteCharAt(index: number, char: string) : CharStream {
+            if (char.length != 1){
+                throw new Error("Char must be a character");
+            }
+            if (char != this.input.charAt(index)){
+                throw new Error("Character at index is not the one given!");
+            }
+            const s = this.input.substr(0, index) + this.input.substr(index + 1);
+            return new CharStream(s, this.startpos, this.endpos - 1, this.hasEOF);
+        }
+        
         /**
          * Concatenate an array of CharStream objects into a single
          * CharStream object.
