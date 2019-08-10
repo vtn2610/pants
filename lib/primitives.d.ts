@@ -66,14 +66,6 @@ export declare namespace Primitives {
     function zero<T>(expecting: string): IParser<T>;
     function minEdit(input: string, expectedStr: string): edit[];
     /**
-     * expect tries to apply the given parser and returns the result of that parser
-     * if it succeeds, otherwise it replaces the current stream with a stream with
-     * modified code given a correct edit, and tries again.
-     *
-     * @param parser The parser to try
-     * @param f A function that produces a new Errors given an existing Errors
-     */
-    /**
      * item successfully consumes the first character if the input
      * string is non-empty, otherwise it fails.
      */
@@ -109,7 +101,7 @@ export declare namespace Primitives {
      * character in the input stream is c, otherwise it fails.
      * @param c
      */
-    function char(c: string, edit?: edit): IParser<CharStream>;
+    function char(c: string, edit?: edit, strMode?: boolean): IParser<CharStream>;
     function lower_chars(): string[];
     function upper_chars(): string[];
     /**

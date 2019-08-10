@@ -21,10 +21,6 @@ import { parser } from "marked";
 
 export namespace Primitives {
 
-    function id<T>(t : T) : T{
-        return t;
-    }
-
     function argMin<T>(ts : T[], f : (t : T) => number) : T {
         let element = ts[0];
         for (let i = 1; i < ts.length; i++){
@@ -130,51 +126,6 @@ export namespace Primitives {
     }
 
     /**
-     * expect tries to apply the given parser and returns the result of that parser
-     * if it succeeds, otherwise it replaces the current stream with a stream with
-     * modified code given a correct edit, and tries again.
-     *
-     * @param parser The parser to try
-     * @param f A function that produces a new Errors given an existing Errors
-     */
-    // export function expect<T>(parser: IParser<T>) : (f: EComposer) => IParser<T> {
-    //     return (f: EComposer) => {
-    //         return (istream: CharStream) => {
-    //             let outcome: Outcome<T> = parser(istream);
-    //             switch (outcome.tag) {
-    //                 case "success":
-    //                     return outcome;
-    //                 case "failure":
-    //                     let fail: Failure = outcome;
-    //                     let errors : ErrorType[] = fail.errors;
-
-    //                     let newErrors : ErrorType[] = errors.map(e => {
-    //                         //computes the size of the substring required for LCS
-    //                         let windowSize = e.expectedStr.length;
-
-    //                         //the actual substring inside window
-    //                         let inputBound = istream.input.substring(fail.error_pos, fail.error_pos + windowSize);
-
-    //                         //the set of edits returned via LCS
-    //                         let editsSet = minEdit(inputBound, e.expectedStr);
-
-    //                         //the corrected stream and edit distance after applying edits within window
-    //                         let edits : [number,CharStream] = editParse(parser, istream, e.edit, windowSize, fail.error_pos, fail.error_pos, editsSet);
-
-    //                         //set edit distance and modified stream in error object, and advance start pos
-    //                         e.edit = edits[0];
-    //                         e.modStream = edits[1].seek(windowSize);
-                            
-    //                         //apply error composition
-    //                         return f(e);
-    //                     });
-    //                     return new Failure(istream.startpos, newErrors);
-    //             }
-    //         }
-    //     };
-    // }
-
-    /**
      * item successfully consumes the first character if the input
      * string is non-empty, otherwise it fails.
      */
@@ -184,7 +135,7 @@ export namespace Primitives {
                 //On Failure, the edit distance must be 1, which is
                 //set inside ItemError constructor
                 let e = new ItemError();
-                e.modStream = new CharStream(istream.input + " ", istream.startpos + 1);
+                e.modStream = new CharStream(istream.input, istream.startpos);
                 return new Failure(istream.startpos, [e]);
             } else {
                 let remaining = istream.tail(); // remaining string;
@@ -261,7 +212,7 @@ export namespace Primitives {
                             switch (o3.tag){
                                 case "success":
                                     //p fails but q succeeds
-                                    let e = new SeqError(o1.errors, o3.inputstream, minError2.edit, true, false)
+                                    let e = new SeqError(o1.errors, o3.inputstream, minError2.edit, true, false);
                                     return new Failure(o1.error_pos, [e]);
                                 default:
                                     //both p and q fail
@@ -301,8 +252,7 @@ export namespace Primitives {
                             : (istream: CharStream) => {
                                 let e = new SatError(2,char_class);
                                 let istream2 = new CharStream(istream.input, istream.startpos-1)
-                                let o3 = <Success<CharStream>>item()(istream2);
-                                e.modStream = o3.inputstream;
+                                e.modStream = istream2;
                                 return new Failure(istream2.startpos, [e])
                             };
                     };
@@ -317,20 +267,22 @@ export namespace Primitives {
      * character in the input stream is c, otherwise it fails.
      * @param c
      */
-    export function char(c: string, edit : edit = {sign: 2, char : c, pos : 0}): IParser<CharStream> {
+    export function char(c: string, edit : edit = {sign: 2, char : c, pos : 0}, strMode : boolean = false): IParser<CharStream> {
         if (c.length != 1) {
             throw new Error("char parser takes a string of length 1 (i.e., a char)");
         }
         return failAppfun(sat([c]))(f => {
-            let e = new CharError(f.errors, 0 ,c);
+            let e = new CharError(f.errors, 0, c);
             let minError = argMin(f.errors, e => e.edit);
-            if (edit.sign == 0) { // delete case
+            if (!strMode && minError.edit == 1) edit.sign = 1; //CharError -> SatError -> ItemError
+            
+            if (edit.sign == 0) { // delete
                 e.modStream = minError.modStream.deleteCharAt(f.error_pos, c);
                 e.edit = 1;
-            } else if (edit.sign == 1) { // insert case
+            } else if (edit.sign == 1) { // insert and consume char 
                 e.modStream = minError.modStream.insertCharAt(f.error_pos, c);
                 e.edit = 1;
-            } else if (edit.sign == 2) { // replace case
+            } else if (edit.sign == 2) { // replace and consume char (default)
                 e.modStream = minError.modStream.replaceCharAt(f.error_pos, c);
                 e.edit = 2;
             }
@@ -353,8 +305,13 @@ export namespace Primitives {
     export function letter(): IParser<CharStream> {
         let parser : IParser<CharStream> = sat(lower_chars().concat(upper_chars()));
         return failAppfun(parser)((f : Failure) => {
-            let e = new LetterError(f.errors, f.errors[0].edit)
-            e.modStream = f.errors[0].modStream.replaceCharAt(f.error_pos, e.expectedStr);
+            let minError = argMin(f.errors, e => e.edit);
+            let e = new LetterError(f.errors, minError.edit)
+            if (minError.edit == 1) {
+                e.modStream = minError.modStream.insertCharAt(f.error_pos, e.expectedStr);
+            } else {
+                e.modStream = minError.modStream.replaceCharAt(f.error_pos, e.expectedStr);
+            }
             return new Failure(f.error_pos, [e])
         });
     }
@@ -367,8 +324,13 @@ export namespace Primitives {
     export function digit(): IParser<CharStream> {
         let parser : IParser<CharStream> = sat(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
         return failAppfun(parser)((f : Failure) => {
-            let e = new DigitError(f.errors, f.errors[0].edit)
-            e.modStream = f.errors[0].modStream.replaceCharAt(f.error_pos, e.expectedStr);
+            let minError = argMin(f.errors, e => e.edit);
+            let e = new DigitError(f.errors, minError.edit)
+            if (minError.edit == 1) {
+                e.modStream = minError.modStream.insertCharAt(f.error_pos, e.expectedStr);
+            } else {
+                e.modStream = minError.modStream.replaceCharAt(f.error_pos, e.expectedStr);
+            }
             return new Failure(f.error_pos, [e])
         });
     }
@@ -421,7 +383,8 @@ export namespace Primitives {
                                 //TODO: replace with selection function
                                 //this is an arbitrary choice, for now
                                 let errorpos = Math.min(...allErrors.map(e => e.modStream.startpos));
-                                return new Failure(errorpos, allErrors);
+                                let minError = argMin(allErrors, e => e.edit);
+                                return new Failure(errorpos, [minError]);
                         }
                 }
             };
@@ -544,25 +507,19 @@ export namespace Primitives {
             let input = istream.input.substr(istream.startpos, istream.startpos + s.length);
             let window = s.length;
             let edits = minEdit(input, s);
-            console.log(edits);
             let p = result(new CharStream(""));
             let f = (tup: [CharStream, CharStream]) => tup[0].concat(tup[1]);
             let edit : undefined | edit = edits.shift();
-            for (let i = 0; i < window; i++) {
-                if (edit != undefined && i == edit.pos) { //edits to be fixed <= windowSize
-                    p = seq<CharStream, CharStream, CharStream>(p)(char(s[i], edit))(f);
-                    if (edit.sign == 0) { //delete
-                        for (let edit of edits) {
-                            edit.pos--;
-                        }
-                    } else if (edit.sign == 1) { //insert
-                        for (let edit of edits) {
-                            edit.pos++;
-                        }
-                    }
+            for (let i = 0; i < window; i++) { //edits to be fixed <= windowSize
+                if (edit != undefined && i == edit.pos) { 
+                    p = seq<CharStream, CharStream, CharStream>(p)(char(s[i], edit, true))(f);
+                    if (edit.sign == 0) --i;  //delete case
+                    if (edit.sign == 1 && i < input.length) { //insert case
+                        for (let edit of edits) ++edit.pos;
+                    } 
                     edit = edits.shift();
                 } else {
-                    p = seq<CharStream, CharStream, CharStream>(p)(char(s[i]))(f);
+                    p = seq<CharStream, CharStream, CharStream>(p)(char(s[i], {sign: 2, char : s[i], pos : 0}, true))(f);
                 }
             }
             let outcome = p(istream);
@@ -585,7 +542,14 @@ export namespace Primitives {
      */
     export function eof(): IParser<EOFMark> {
         return (istream: CharStream) => {
-            return istream.isEOF() ? new Success(istream, EOF) : new Failure(istream.startpos, [new EOFError()]);
+            if (istream.isEOF()) {
+                return new Success(istream, EOF);
+            } 
+            let e = new EOFError();
+            let newInput = istream.input.substr(0, istream.startpos);
+            e.modStream = new CharStream(newInput, istream.startpos, istream.startpos);
+            e.edit = istream.input.length - newInput.length;
+            return new Failure(istream.startpos, [e]);
         }
     }
 
@@ -684,7 +648,7 @@ export namespace Primitives {
      */
     export function ws(): IParser<CharStream> {
         return (istream: CharStream) => {
-            let o = many(char(" "))(istream);
+            let o = many(sat([" "]))(istream);
             switch (o.tag) {
                 case "success":
                     return new Success(o.inputstream, CharStream.concat(o.result));
@@ -701,14 +665,21 @@ export namespace Primitives {
      */
     export function ws1(): IParser<CharStream> {
         return (istream: CharStream) => {
-            let o = many1(char(" "))(istream);
+            let o = sat([" "])(istream);
             switch (o.tag) {
                 case "success":
-                    return new Success(o.inputstream, CharStream.concat(o.result));
+                    let o2 = <Success<CharStream[]>>many(sat([" "]))(istream)
+                    return new Success(o.inputstream, CharStream.concat([o.result].concat(o2.result)));
                 case "failure":
-                    let minError = argMin(o.errors, e => e.edit); 
+                    let minError = argMin(o.errors, e => e.edit);
                     let e = new WSError(o.errors, minError.edit);
-                    e.modStream = minError.modStream.replaceCharAt(o.error_pos, e.expectedStr);
+                    if (minError.edit == 1) {
+                        e.modStream = minError.modStream.insertCharAt(o.error_pos, e.expectedStr);
+                    } else {
+                        e.modStream = minError.modStream.replaceCharAt(o.error_pos, e.expectedStr);
+                    }
+                    let o3 = <Success<CharStream[]>>many(sat([" "]))(e.modStream);
+                    e.modStream = o3.inputstream;
                     return new Failure(o.error_pos, [e]);
             }
         }
