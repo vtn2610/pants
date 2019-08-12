@@ -21,6 +21,10 @@ import { parser } from "marked";
 
 export namespace Primitives {
 
+    /**
+     * function that finds the minimum of an array of objects
+     * via a number parameter in each object
+     */
     function argMin<T>(ts : T[], f : (t : T) => number) : T {
         let element = ts[0];
         for (let i = 1; i < ts.length; i++){
@@ -127,7 +131,8 @@ export namespace Primitives {
 
     /**
      * item successfully consumes the first character if the input
-     * string is non-empty, otherwise it fails.
+     * string is non-empty, otherwise it fails. When it fails, it 
+     * returns an ItemError with edit distance 1.
      */
     export function item() {
         return (istream: CharStream) => {
@@ -182,9 +187,22 @@ export namespace Primitives {
      * and a function f. It applies p to the input, passing the
      * remaining input stream to q; q is then applied.  The function
      * f takes the result of p and q, as a tuple, and returns
-     * a single result.
-     * @param p A parser
+     * a single result. There are four total combinations of parser fails
+     * and successes.
      * 
+     * Case 1. Both p and q succeed: We return a successful parse.
+     * 
+     * Case 2. p fails but q succeeds: We fix the inputstream for p, 
+     * and parse the modified input with q. Since q succeeds, we return
+     * a SeqError that wraps p's Error.
+     * 
+     * Case 3. p succeeds but q fails: We fix the inputstream for q,
+     * and return a SeqError wrapping q's Error.
+     * 
+     * Case 4. Both p and q fail: We fix the inputstream for both p
+     * and q, and return a SeqError wrapping both p's and q's Errors
+     * 
+     * @param p A parser
      */
 
     export function seq<T, U, V>(p: IParser<T>) {
@@ -229,7 +247,10 @@ export namespace Primitives {
     /**
      * sat takes a predicate and yields a parser that consumes a
      * single character if the character satisfies the predicate,
-     * otherwise it fails.
+     * otherwise it fails. If sat fails, then it determines whether
+     * the failure was from a missing character or incorrect 
+     * character. If missing, it inserts a character, and if incorrect,
+     * it replaces a character.
      */
     export function sat(char_class: string[]): IParser<CharStream> {
         return (istream: CharStream) => {
@@ -265,6 +286,10 @@ export namespace Primitives {
      * char takes a character and yields a parser that consume
      * that character. The returned parser succeeds if the next
      * character in the input stream is c, otherwise it fails.
+     * If it fails, it decides whether it fails from a missing
+     * character StringError. If it is an ItemError, then it inserts 
+     * a character. Otherwise, it takes instructions from the str 
+     * parser and delete, inserts, or replaces a character.
      * @param c
      */
     export function char(c: string, edit : edit = {sign: 2, char : c, pos : 0}, strMode : boolean = false): IParser<CharStream> {
@@ -300,7 +325,9 @@ export namespace Primitives {
 
     /**
      * letter returns a parser that consumes a single alphabetic
-     * character, from a-z, regardless of case.
+     * character, from a-z, regardless of case. If it fails, it
+     * decides whether or not to insert or replace based on the edit
+     * distance.
      */
     export function letter(): IParser<CharStream> {
         let parser : IParser<CharStream> = sat(lower_chars().concat(upper_chars()));
@@ -319,7 +346,9 @@ export namespace Primitives {
     /**
      * digit returns a parser that consumes a single numeric
      * character, from 0-9.  Note that the type of the result
-     * is a string, not a number.
+     * is a string, not a number. If it fails, it
+     * decides whether or not to insert or replace based on the edit
+     * distance.
      */
     export function digit(): IParser<CharStream> {
         let parser : IParser<CharStream> = sat(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
@@ -356,9 +385,9 @@ export namespace Primitives {
      * p1 and p2. The returned parser will first apply
      * parser p1.  If p1 succeeds, p1's Outcome is returned.
      * If p1 fails, p2 is applied and the Outcome of p2 is returned.
-     *
-     * An exception is when an outcome is a critical failure,
-     * that outcome is immediately returned.
+     * If both parsers fail, then we choose the failure that can
+     * be fixed with the minimum number of edits, and return
+     * that parser.
      *
      * @param p1 A parser.
      */
@@ -393,9 +422,6 @@ export namespace Primitives {
 
     /**
      * Like choice, but chooses from multiple possible parsers
-     * First considers the farthest failing error, and if there
-     * are multiple, calculate longest common subsequence for each choice, 
-     * and returns the maximum LCS
      * Example usage: choices(p1, p2, p3)
      *
      * @param parsers An array of parsers to try
@@ -451,7 +477,7 @@ export namespace Primitives {
 
     /**
      * many repeatedly applies the parser p until p fails. many always
-     * succeeds, even if it matches nothing or if an outcome is critical.
+     * succeeds, even if it matches nothing.
      * many tries to guard against an infinite loop by raising an exception
      * if p succeeds without changing the parser state.
      * @param p The parser to try
@@ -499,7 +525,9 @@ export namespace Primitives {
     }
 
     /**
-     * str yields a parser for the given string.
+     * str yields a parser for the given string. It first calculates
+     * the number of edits needed to fix the string given what is 
+     * expected, and then incrementally uses char to fix the string
      * @param s A string
      */
     export function str(s: string): IParser<CharStream> {
@@ -641,6 +669,14 @@ export namespace Primitives {
     let wschars: IParser<CharStream> = choice(sat([' ', "\t"]))(nl());
 
     /**
+     * nl matches and returns a newline.
+     */
+    export function nl(): IParser<CharStream> {
+        return sat(["\n","\r\n"]);
+        //choice(sat(["\n"]))(sat(["\r\n"]));
+    }
+
+    /**
      * ws matches zero or more of the following whitespace characters:
      * ' ', '\t', '\n', or '\r\n'
      * ws returns matched whitespace in a single CharStream result.
@@ -648,7 +684,7 @@ export namespace Primitives {
      */
     export function ws(): IParser<CharStream> {
         return (istream: CharStream) => {
-            let o = many(sat([" "]))(istream);
+            let o = many(wschars)(istream);
             switch (o.tag) {
                 case "success":
                     return new Success(o.inputstream, CharStream.concat(o.result));
@@ -665,31 +701,25 @@ export namespace Primitives {
      */
     export function ws1(): IParser<CharStream> {
         return (istream: CharStream) => {
-            let o = sat([" "])(istream);
+            let o = (wschars)(istream);
             switch (o.tag) {
                 case "success":
-                    let o2 = <Success<CharStream[]>>many(sat([" "]))(istream)
+                    let o2 = <Success<CharStream[]>>many(wschars)(istream)
                     return new Success(o.inputstream, CharStream.concat([o.result].concat(o2.result)));
                 case "failure":
                     let minError = argMin(o.errors, e => e.edit);
-                    let e = new WSError(o.errors, minError.edit);
-                    if (minError.edit == 1) {
-                        e.modStream = minError.modStream.insertCharAt(o.error_pos, e.expectedStr);
-                    } else {
-                        e.modStream = minError.modStream.replaceCharAt(o.error_pos, e.expectedStr);
-                    }
-                    let o3 = <Success<CharStream[]>>many(sat([" "]))(e.modStream);
+                    let e = new WSError(o.errors, 1);
+                    e.modStream = minError.modStream.insertCharAt(o.error_pos, e.expectedStr);
+                    // if (minError.edit == 1) {
+                    //     e.modStream = minError.modStream.insertCharAt(o.error_pos, e.expectedStr);
+                    // } else {
+                    //     e.modStream = minError.modStream.replaceCharAt(o.error_pos, e.expectedStr);
+                    // }
+                    let o3 = <Success<CharStream[]>>many(wschars)(e.modStream);
                     e.modStream = o3.inputstream;
                     return new Failure(o.error_pos, [e]);
             }
         }
-    }
-
-    /**
-     * nl matches and returns a newline.
-     */
-    export function nl(): IParser<CharStream> {
-        return choice(str("\n"))(str("\r\n"));
     }
 
     function groupBy<T, U>(list: T[], keyGetter: (e: T) => U): Map<U, T[]> {
