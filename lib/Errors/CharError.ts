@@ -1,29 +1,30 @@
 import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { metriclcs } from "../Edit/MetricLcs";
+import { edit } from "../Edit/MetricLcs";
+import { CharUtil } from "../charstream"
+import CharStream = CharUtil.CharStream;
+import { totalmem } from 'os';
+import { AbstractError } from './AbstractError';
+import { Primitives } from '../primitives';
+import Success = Primitives.Success;
 
+export class CharError extends AbstractError {
 
-export class CharError implements ErrorType {
     private _expectedChar : string;
 
-    constructor(expectedChar : string) {
+    constructor(rootCauses : ErrorType[], editDistance : number, expectedChar : string) {
+        super();
+        this._editDistance = editDistance;
         this._expectedChar = expectedChar;
+        this._rootCauses = Some(rootCauses);
     }
 
-    rootCause() : Option<ErrorType> {
-        return None;
+    get expectedStr() : string{
+        return this._expectedChar
     }
 
     explanation() {
         return "character " + " ' " + this._expectedChar + " ' "; 
-    }
-
-    minEdit(input: string, expectedStr: string) : number {
-        return metriclcs (input, expectedStr);
-    }
-
-    expectedStr() : string {
-        return this._expectedChar;
     }
 
     toString() : string {

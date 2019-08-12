@@ -1,30 +1,33 @@
 import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
+import { edit } from "../Edit/MetricLcs";
+import { CharUtil } from "../charstream"
+import CharStream = CharUtil.CharStream;
+import { totalmem } from 'os';
+import { AbstractError } from './AbstractError';
+import { Primitives } from '../primitives';
+import Success = Primitives.Success;
 
-export class BetweenLeftError implements ErrorType {
-    private _rootCause : ErrorType;
-    
-    constructor(rootCause : ErrorType) {
-        this._rootCause = rootCause;
+export class BetweenLeftError extends AbstractError {
+
+    constructor(rootCauses : ErrorType[], editDistance : number) {
+        super();
+        this._editDistance = editDistance;
+        this._rootCauses = Some(rootCauses);
     }
 
-    rootCause() : Option<ErrorType> {
-        return Some(this._rootCause);
-    }
-
+    get expectedStr() : string{
+        if (this._rootCauses.isDefined()) {
+            return this._rootCauses.get()[0].expectedStr
+        } else {
+            throw new Error("no expected String")
+        }
+    }   
     explanation() : string {
         return "left";
     }
 
-    minEdit(input: string, expectedStr: string) : number {
-        return this._rootCause.minEdit(input, expectedStr);
-    }
-
-    expectedStr() : string {
-        return "(" ;
-    }
-
     toString() {
-        return "BetweenLeftError -> " + this._rootCause;
+        return "BetweenLeftError -> " + this._rootCauses;
     }
 }

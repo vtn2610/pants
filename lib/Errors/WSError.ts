@@ -1,23 +1,27 @@
+import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { Option, Some, None } from "space-lift";
-import { metriclcs } from "../Edit/MetricLcs";
+import { edit } from "../Edit/MetricLcs";
+import { CharUtil } from "../charstream"
+import CharStream = CharUtil.CharStream;
+import { totalmem } from 'os';
+import { AbstractError } from './AbstractError';
+import { Primitives } from '../primitives';
+import Success = Primitives.Success;
 
-export class WSError implements ErrorType {
+export class WSError extends AbstractError {
 
-    rootCause() : Option<ErrorType> {
-        return None;
+    constructor(rootCauses : ErrorType[], editDistance : number) {
+        super();
+        this._editDistance = editDistance;
+        this._rootCauses = Some(rootCauses);
     }
 
-    explanation() : string {
+    get expectedStr() : string{
+        return " ";
+    } 
+
+    explanation() {
         return "white space";
-    }
-
-    minEdit(input: string, expectedStr: string) : number {
-        return metriclcs(input, expectedStr);
-    }
-
-    expectedStr() : string {
-        return " " ;
     }
 
     toString() : string {

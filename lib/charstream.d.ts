@@ -69,6 +69,18 @@ export declare namespace CharUtil {
          */
         concat(cs: CharStream): CharStream;
         /**
+<<<<<<< HEAD
+         * replaceCharAt replaces the character at index with the given
+         * character
+         * @param index
+         * @param char
+         */
+        replaceCharAt(index: number, char: string): CharStream;
+        insertCharAt(index: number, char: string): CharStream;
+        deleteCharAt(index: number, char: string): CharStream;
+        /**
+=======
+>>>>>>> master
          * Concatenate an array of CharStream objects into a single
          * CharStream object.
          * @param css a CharStream[]

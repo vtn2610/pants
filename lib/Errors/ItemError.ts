@@ -1,23 +1,25 @@
+import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
-import { Option, Some, None } from "space-lift";
-import { metriclcs } from "../Edit/MetricLcs";
+import { edit } from "../Edit/MetricLcs";
+import { CharUtil } from "../charstream"
+import CharStream = CharUtil.CharStream;
+import { totalmem } from 'os';
+import { AbstractError } from './AbstractError';
 
-export class ItemError implements ErrorType {
+export class ItemError extends AbstractError{
 
-    rootCause() : Option<ErrorType> {
-        return None;
+    constructor() {
+        super();
+        this._editDistance = 1;
+
     }
 
+    get expectedStr() : string{
+        return " ";
+    } 
+    
     explanation() {
-        return "";
-    }
-
-    minEdit(input: string, expectedStr: string) : number {
-        return metriclcs (input, expectedStr);
-    }
-
-    expectedStr() : string {
-        return "" ;
+        return "something";
     }
 
     toString() : string {

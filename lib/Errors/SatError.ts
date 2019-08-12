@@ -1,34 +1,33 @@
 import { Option, Some, None, tuple} from 'space-lift';
 import { ErrorType } from "./ErrorType";
+import { edit } from "../Edit/MetricLcs";
+import { CharUtil } from "../charstream"
+import CharStream = CharUtil.CharStream;
+import { totalmem } from 'os';
+import { AbstractError } from './AbstractError';
+import { Primitives } from '../primitives';
+import Success = Primitives.Success;
 
-export class SatError implements ErrorType {
-    private _expectedStr : string[];
+export class SatError extends AbstractError {
 
-    constructor(expectedStr : string[]) {
-        this._expectedStr = expectedStr;
+    private _expectedChars : string[];
+    
+    constructor(editDistance : number, expectedChars : string[]) {
+        super();
+        this._expectedChars = expectedChars;
+        this._editDistance = editDistance;
     }
 
-    rootCause() : Option<ErrorType> {
-        return None;
-    }
-
-    get errors() : string[] {
-        return this._expectedStr;
-    }
+    get expectedStr() : string{
+        //TODO: replace arbitrary choice with function
+        return this._expectedChars[0];
+    } 
 
     explanation() {
-        return "";
-    }
-
-    minEdit(input: string, expectedStr: string) : number {
-        return 0;
-    }
-
-    expectedStr(): string{
-        return "";
+        return "sat";
     }
 
     toString() {
-        return "SatError -> " + this._expectedStr; 
+        return "SatError";
     }
 }
