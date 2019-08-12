@@ -287,9 +287,7 @@ export namespace Primitives {
      * that character. The returned parser succeeds if the next
      * character in the input stream is c, otherwise it fails.
      * If it fails, it decides whether it fails from a missing
-     * character StringError. If it is an ItemError, then it inserts 
-     * a character. Otherwise, it takes instructions from the str 
-     * parser and delete, inserts, or replaces a character.
+     * character or StringError, and fixes accordingly
      * @param c
      */
     export function char(c: string, edit : edit = {sign: 2, char : c, pos : 0}, strMode : boolean = false): IParser<CharStream> {
@@ -576,7 +574,9 @@ export namespace Primitives {
             let e = new EOFError();
             let newInput = istream.input.substr(0, istream.startpos);
             e.modStream = new CharStream(newInput, istream.startpos, istream.startpos);
-            e.edit = istream.input.length - newInput.length;
+            //Effectively replacing with ws to avoid degenerate behavior
+            //TODO Does not get interpreted in choice correctly
+            e.edit = 2*(istream.input.length - newInput.length);
             return new Failure(istream.startpos, [e]);
         }
     }
