@@ -18,6 +18,8 @@ import { GenericError } from "./Errors/GenericError";
 import { None, Some, Option } from "space-lift";
 import { levenshtein, edit } from "./Edit/Levenshtein";
 import { parser } from "marked";
+import { BetweenRightError } from "../lib/Errors/BetweenRightError";
+import { BetweenLeftError } from "../lib/Errors/BetweenLeftError";
 
 export namespace Primitives {
 
@@ -635,8 +637,18 @@ export namespace Primitives {
     export function between<T, U, V>(popen: IParser<T>): (pclose: IParser<U>) => (p: IParser<V>) => IParser<V> {
         return (pclose: IParser<U>) => {
             return (p: IParser<V>) => {
-                let l: IParser<V> = left<V, U>(p)(pclose);
-                let r: IParser<V> = right<T, V>(popen)(l);
+                let l: IParser<V> = failAppfun(left<V, U>(p)(pclose))((f : Failure) => {
+                    let minError = argMin(f.errors, e => e.edit);
+                    let e = new BetweenRightError(minError.causes, minError.edit);
+                    e.modStream = minError.modStream;
+                    return new Failure(f.error_pos, [e]);
+                });
+                let r: IParser<V> = failAppfun(right<T, V>(popen)(l))((f : Failure) => {
+                    let minError = argMin(f.errors, e => e.edit);
+                    let e = new BetweenLeftError(minError.causes, minError.edit);
+                    e.modStream = minError.modStream;
+                    return new Failure(f.error_pos, [e]);
+                });
                 return r;
             }
         }
