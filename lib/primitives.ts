@@ -15,9 +15,7 @@ import { ZeroError } from "./Errors/ZeroError";
 import { SeqError } from "./Errors/SeqError";
 import { EOFError } from "./Errors/EOFError";
 import { GenericError } from "./Errors/GenericError";
-import { None, Some, Option } from "space-lift";
 import { levenshtein, edit } from "./Edit/Levenshtein";
-import { parser } from "marked";
 import { BetweenRightError } from "../lib/Errors/BetweenRightError";
 import { BetweenLeftError } from "../lib/Errors/BetweenLeftError";
 
