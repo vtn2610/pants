@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { CharUtil } from "../charstream";
 import CharStream = CharUtil.CharStream;
 export interface ErrorType {
@@ -22,12 +21,4 @@ export interface ErrorType {
      * stream
      */
     modStream: CharStream;
-=======
-import { Option } from 'space-lift';
-export interface ErrorType {
-    rootCause(): Option<ErrorType>;
-    explanation(): string;
-    minEdit(input: string, expectedStr: string): number;
-    expectedStr(): string;
->>>>>>> master
 }

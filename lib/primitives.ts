@@ -297,18 +297,18 @@ export namespace Primitives {
             throw new Error("char parser takes a string of length 1 (i.e., a char)");
         }
         return failAppfun(sat([c]))(f => {
-            let e = new CharError(f.errors, 0, c);
+            let e = new CharError(f.errors, 0, edit.char);
             let minError = argMin(f.errors, e => e.edit);
             if (!strMode && minError.edit == 1) edit.sign = 1; //CharError -> SatError -> ItemError
             
             if (edit.sign == 0) { // delete
-                e.modStream = minError.modStream.deleteCharAt(f.error_pos, c);
+                e.modStream = minError.modStream.deleteCharAt(f.error_pos, edit.char);
                 e.edit = 1;
-            } else if (edit.sign == 1) { // insert and consume char 
-                e.modStream = minError.modStream.insertCharAt(f.error_pos, c);
+            } else if (edit.sign == 1) { // insert and consume char
+                e.modStream = minError.modStream.insertCharAt(f.error_pos, edit.char);
                 e.edit = 1;
             } else if (edit.sign == 2) { // replace and consume char (default)
-                e.modStream = minError.modStream.replaceCharAt(f.error_pos, c);
+                e.modStream = minError.modStream.replaceCharAt(f.error_pos, edit.char);
                 e.edit = 2;
             }
             return new Failure(f.error_pos, [e]);
@@ -539,14 +539,15 @@ export namespace Primitives {
             let f = (tup: [CharStream, CharStream]) => tup[0].concat(tup[1]);
             let edit : undefined | edit = edits.shift();
             for (let i = 0; i < window; i++) { //edits to be fixed <= windowSize
-                if (edit != undefined && i == edit.pos) { 
-                    p = seq<CharStream, CharStream, CharStream>(p)(char(s[i], edit, true))(f);
+                if (edit != undefined && i == edit.pos) { // fail and fix
+                    let c = String.fromCharCode((s[i].charCodeAt(0) + 1) % 256); //garanteed to fail in case of double characters
+                    p = seq<CharStream, CharStream, CharStream>(p)(char(c, edit, true))(f);
                     if (edit.sign == 0) --i;  //delete case
                     if (edit.sign == 1 && i < input.length) { //insert case
                         for (let edit of edits) ++edit.pos;
                     } 
                     edit = edits.shift();
-                } else {
+                } else { // succeed
                     p = seq<CharStream, CharStream, CharStream>(p)(char(s[i], {sign: 2, char : s[i], pos : 0}, true))(f);
                 }
             }
@@ -722,11 +723,6 @@ export namespace Primitives {
                     let minError = argMin(o.errors, e => e.edit);
                     let e = new WSError(o.errors, 1);
                     e.modStream = minError.modStream.insertCharAt(o.error_pos, e.expectedStr);
-                    // if (minError.edit == 1) {
-                    //     e.modStream = minError.modStream.insertCharAt(o.error_pos, e.expectedStr);
-                    // } else {
-                    //     e.modStream = minError.modStream.replaceCharAt(o.error_pos, e.expectedStr);
-                    // }
                     let o3 = <Success<CharStream[]>>many(wschars)(e.modStream);
                     e.modStream = o3.inputstream;
                     return new Failure(o.error_pos, [e]);
@@ -775,7 +771,13 @@ export namespace Primitives {
                     }
                 }
             }
-            return new Failure(istream.startpos, [new StringError([],"")]);
+            let minStr = argMin(strs, (str : string) => {
+                let input = istream.input.substr(istream.startpos, istream.startpos + str.length);
+                return minEdit(input, str).length;
+            });
+            let input = istream.input.substr(istream.startpos, istream.startpos + minStr.length);
+            console.log(minEdit(input, minStr))
+            return str(minStr)(istream);
         }
     }
 }
