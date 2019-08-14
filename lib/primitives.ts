@@ -298,7 +298,7 @@ export namespace Primitives {
             let e = new CharError(f.errors, 0, edit.char);
             let minError = argMin(f.errors, e => e.edit);
             if (!strMode && minError.edit == 1) edit.sign = 1; //CharError -> SatError -> ItemError
-            
+
             if (edit.sign == 0) { // delete
                 e.modStream = minError.modStream.deleteCharAt(f.error_pos, edit.char);
                 e.edit = 1;
@@ -306,8 +306,13 @@ export namespace Primitives {
                 e.modStream = minError.modStream.insertCharAt(f.error_pos, edit.char);
                 e.edit = 1;
             } else if (edit.sign == 2) { // replace and consume char (default)
-                e.modStream = minError.modStream.replaceCharAt(f.error_pos, edit.char);
-                e.edit = 2;
+                if (minError.modStream.input.charAt(f.error_pos) == "\n") {
+                    e.modStream =  minError.modStream.insertCharAt(f.error_pos, edit.char);
+                    e.edit = 1;
+                } else {
+                    e.modStream = minError.modStream.replaceCharAt(f.error_pos, edit.char);
+                    e.edit = 2;
+                }
             }
             return new Failure(f.error_pos, [e]);
         });
@@ -530,7 +535,7 @@ export namespace Primitives {
      */
     export function str(s: string): IParser<CharStream> {
         return (istream : CharStream) => {
-            let input = istream.input.substr(istream.startpos, istream.startpos + s.length);
+            let input = istream.input.substring(istream.startpos, istream.startpos + s.length);
             let window = s.length;
             let edits = minEdit(input, s);
             let p = result(new CharStream(""));
@@ -573,7 +578,7 @@ export namespace Primitives {
                 return new Success(istream, EOF);
             } 
             let e = new EOFError();
-            let newInput = istream.input.substr(0, istream.startpos);
+            let newInput = istream.input.substring(0, istream.startpos);
             e.modStream = new CharStream(newInput, istream.startpos, istream.startpos);
             //Effectively replacing with ws to avoid degenerate behavior
             //TODO Does not get interpreted in choice correctly
@@ -770,11 +775,11 @@ export namespace Primitives {
                 }
             }
             let minStr = argMin(strs, (str : string) => {
-                let input = istream.input.substr(istream.startpos, istream.startpos + str.length);
+                let input = istream.input.substring(istream.startpos, istream.startpos + str.length);
                 return minEdit(input, str).length;
             });
-            let input = istream.input.substr(istream.startpos, istream.startpos + minStr.length);
-            console.log(minEdit(input, minStr))
+            //let input = istream.input.substring(istream.startpos, istream.startpos + minStr.length);
+            //console.log(minEdit(input, minStr))
             return str(minStr)(istream);
         }
     }
