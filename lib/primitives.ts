@@ -221,6 +221,11 @@ export namespace Primitives {
                                 //p succeeds and q fails
                                 default:
                                     let minError = argMin(o2.errors, e => e.edit);
+                                    seqCount += minError.edit;
+                                    if (seqCount > (istreamLength*2)) {
+                                        let stop = new SeqError(o2.errors, minError.modStream, minError.edit, true, true);
+                                        return new Failure(o2.error_pos, [stop]);
+                                    }
                                     let e = new SeqError(o2.errors, minError.modStream, minError.edit, false, true)
                                     return new Failure(o2.error_pos, [e]);
                             }
@@ -241,6 +246,11 @@ export namespace Primitives {
                                 default:
                                     //both p and q fail
                                     let minError3 = argMin(o3.errors, e => e.edit);
+                                    seqCount += minError3.edit;
+                                    if (seqCount > (istreamLength*2)) {
+                                        let stop = new SeqError(o3.errors, minError3.modStream, minError3.edit, true, true);
+                                        return new Failure(o3.error_pos, [stop]);
+                                    }
                                     let e3 = new SeqError(o3.errors.concat(o1.errors), minError3.modStream, minError3.edit + minError2.edit, true, true)
                                     return new Failure(o1.error_pos, [e3])      
                             }
