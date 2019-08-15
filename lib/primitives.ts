@@ -225,7 +225,9 @@ export namespace Primitives {
                             }
                         default:
                             let minError2 = argMin(o1.errors, e => e.edit);
+                            console.log(minError2.edit);
                             if (minError2.edit > (istream.input.length*2)) {
+                                console.log("min Edit exceeded");
                                 let stop = new SeqError(o1.errors, minError2.modStream, minError2.edit, true, true);
                                 return new Failure(o1.error_pos, [stop]);
                             }
