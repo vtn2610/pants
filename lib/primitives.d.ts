@@ -102,8 +102,6 @@ export declare namespace Primitives {
      *
      * @param p A parser
      */
-    let seqCount: number;
-    let istreamLength: number;
     function seq<T, U, V>(p: IParser<T>): (q: IParser<U>) => (f: (e: [T, U]) => V) => (istream: CharUtil.CharStream) => Failure | Success<V>;
     /**
      * sat takes a predicate and yields a parser that consumes a

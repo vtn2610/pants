@@ -15,7 +15,9 @@ import { ZeroError } from "./Errors/ZeroError";
 import { SeqError } from "./Errors/SeqError";
 import { EOFError } from "./Errors/EOFError";
 import { GenericError } from "./Errors/GenericError";
+import { None, Some, Option } from "space-lift";
 import { levenshtein, edit } from "./Edit/Levenshtein";
+import { parser } from "marked";
 import { BetweenRightError } from "../lib/Errors/BetweenRightError";
 import { BetweenLeftError } from "../lib/Errors/BetweenLeftError";
 
@@ -204,8 +206,7 @@ export namespace Primitives {
      * 
      * @param p A parser
      */
-    export let seqCount = 0;
-    export let istreamLength = 0
+
     export function seq<T, U, V>(p: IParser<T>) {
         return (q: IParser<U>) => {
             return (f: (e: [T, U]) => V) => {
@@ -221,21 +222,11 @@ export namespace Primitives {
                                 //p succeeds and q fails
                                 default:
                                     let minError = argMin(o2.errors, e => e.edit);
-                                    seqCount += minError.edit;
-                                    if (seqCount > (istreamLength*2)) {
-                                        let stop = new SeqError(o2.errors, minError.modStream, minError.edit, true, true);
-                                        return new Failure(o2.error_pos, [stop]);
-                                    }
                                     let e = new SeqError(o2.errors, minError.modStream, minError.edit, false, true)
                                     return new Failure(o2.error_pos, [e]);
                             }
                         default:
                             let minError2 = argMin(o1.errors, e => e.edit);
-                            seqCount += minError2.edit;
-                            if (seqCount > (istreamLength*2)) {
-                                let stop = new SeqError(o1.errors, minError2.modStream, minError2.edit, true, true);
-                                return new Failure(o1.error_pos, [stop]);
-                            }
                             //parse q with modified istream if p fails
                             let o3 = q(minError2.modStream);
                             switch (o3.tag){
@@ -246,11 +237,6 @@ export namespace Primitives {
                                 default:
                                     //both p and q fail
                                     let minError3 = argMin(o3.errors, e => e.edit);
-                                    seqCount += minError3.edit;
-                                    if (seqCount > (istreamLength*2)) {
-                                        let stop = new SeqError(o3.errors, minError3.modStream, minError3.edit, true, true);
-                                        return new Failure(o3.error_pos, [stop]);
-                                    }
                                     let e3 = new SeqError(o3.errors.concat(o1.errors), minError3.modStream, minError3.edit + minError2.edit, true, true)
                                     return new Failure(o1.error_pos, [e3])      
                             }
@@ -314,7 +300,7 @@ export namespace Primitives {
             let e = new CharError(f.errors, 0, edit.char);
             let minError = argMin(f.errors, e => e.edit);
             if (!strMode && minError.edit == 1) edit.sign = 1; //CharError -> SatError -> ItemError
-
+            
             if (edit.sign == 0) { // delete
                 e.modStream = minError.modStream.deleteCharAt(f.error_pos, edit.char);
                 e.edit = 1;
@@ -322,13 +308,8 @@ export namespace Primitives {
                 e.modStream = minError.modStream.insertCharAt(f.error_pos, edit.char);
                 e.edit = 1;
             } else if (edit.sign == 2) { // replace and consume char (default)
-                if (minError.modStream.input.charAt(f.error_pos) == "\n") {
-                    e.modStream =  minError.modStream.insertCharAt(f.error_pos, edit.char);
-                    e.edit = 1;
-                } else {
-                    e.modStream = minError.modStream.replaceCharAt(f.error_pos, edit.char);
-                    e.edit = 2;
-                }
+                e.modStream = minError.modStream.replaceCharAt(f.error_pos, edit.char);
+                e.edit = 2;
             }
             return new Failure(f.error_pos, [e]);
         });
@@ -551,7 +532,7 @@ export namespace Primitives {
      */
     export function str(s: string): IParser<CharStream> {
         return (istream : CharStream) => {
-            let input = istream.input.substring(istream.startpos, istream.startpos + s.length);
+            let input = istream.input.substr(istream.startpos, istream.startpos + s.length);
             let window = s.length;
             let edits = minEdit(input, s);
             let p = result(new CharStream(""));
@@ -559,8 +540,8 @@ export namespace Primitives {
             let edit : undefined | edit = edits.shift();
             for (let i = 0; i < window; i++) { //edits to be fixed <= windowSize
                 if (edit != undefined && i == edit.pos) { // fail and fix
-                    let c = String.fromCharCode((s[i].charCodeAt(0) + 1) % 256); //garanteed to fail in case of double characters
-                    p = seq<CharStream, CharStream, CharStream>(p)(char(c, edit, true))(f);
+                    //TODE: edge case: double characters Ex: ellipse and elipse
+                    p = seq<CharStream, CharStream, CharStream>(p)(char(s[i], edit, true))(f);
                     if (edit.sign == 0) --i;  //delete case
                     if (edit.sign == 1 && i < input.length) { //insert case
                         for (let edit of edits) ++edit.pos;
@@ -594,7 +575,7 @@ export namespace Primitives {
                 return new Success(istream, EOF);
             } 
             let e = new EOFError();
-            let newInput = istream.input.substring(0, istream.startpos);
+            let newInput = istream.input.substr(0, istream.startpos);
             e.modStream = new CharStream(newInput, istream.startpos, istream.startpos);
             //Effectively replacing with ws to avoid degenerate behavior
             //TODO Does not get interpreted in choice correctly
@@ -791,11 +772,11 @@ export namespace Primitives {
                 }
             }
             let minStr = argMin(strs, (str : string) => {
-                let input = istream.input.substring(istream.startpos, istream.startpos + str.length);
+                let input = istream.input.substr(istream.startpos, istream.startpos + str.length);
                 return minEdit(input, str).length;
             });
-            //let input = istream.input.substring(istream.startpos, istream.startpos + minStr.length);
-            //console.log(minEdit(input, minStr))
+            let input = istream.input.substr(istream.startpos, istream.startpos + minStr.length);
+            console.log(minEdit(input, minStr))
             return str(minStr)(istream);
         }
     }
