@@ -540,8 +540,8 @@ export namespace Primitives {
             let edit : undefined | edit = edits.shift();
             for (let i = 0; i < window; i++) { //edits to be fixed <= windowSize
                 if (edit != undefined && i == edit.pos) { // fail and fix
-                    let c = String.fromCharCode((s[i].charCodeAt(0) + 1) % 256); //garanteed to fail in case of double characters
-                    p = seq<CharStream, CharStream, CharStream>(p)(char(c, edit, true))(f);
+                    //let c = String.fromCharCode((s[i].charCodeAt(0) + 1) % 256); //garanteed to fail in case of double characters
+                    p = seq<CharStream, CharStream, CharStream>(p)(char(s[i], edit, true))(f);
                     if (edit.sign == 0) --i;  //delete case
                     if (edit.sign == 1 && i < input.length) { //insert case
                         for (let edit of edits) ++edit.pos;
